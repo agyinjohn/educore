@@ -21,48 +21,54 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+// Role values must match the backend's Role enum (@educore/shared) exactly —
+// the JWT carries roles like 'SCHOOL_ADMIN', not 'admin'.
+const ADMIN_ROLES = ['SUPER_ADMIN', 'SCHOOL_OWNER', 'SCHOOL_ADMIN'];
+const STAFF_ROLES = [...ADMIN_ROLES, 'ACADEMIC_HEAD', 'TEACHER'];
+const EVERYONE = [...STAFF_ROLES, 'ACCOUNTANT', 'HR_MANAGER', 'LIBRARIAN', 'TRANSPORT_COORDINATOR', 'WARDEN', 'STUDENT', 'PARENT'];
+
 const navigation = [
   {
     name: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    roles: ['admin', 'teacher', 'student', 'parent'],
+    roles: EVERYONE,
   },
   {
     name: 'Students',
     href: '/dashboard/students',
     icon: Users,
-    roles: ['admin', 'teacher'],
+    roles: STAFF_ROLES,
   },
   {
-    name: 'Courses',
-    href: '/dashboard/courses',
+    name: 'Classes',
+    href: '/dashboard/classes',
     icon: BookOpen,
-    roles: ['admin', 'teacher'],
+    roles: STAFF_ROLES,
   },
   {
     name: 'Finance',
     href: '/dashboard/finance',
     icon: DollarSign,
-    roles: ['admin'],
+    roles: [...ADMIN_ROLES, 'ACCOUNTANT'],
   },
   {
     name: 'Analytics',
     href: '/dashboard/analytics',
     icon: BarChart3,
-    roles: ['admin', 'teacher'],
+    roles: STAFF_ROLES,
   },
   {
     name: 'Reports',
     href: '/dashboard/reports',
     icon: FileText,
-    roles: ['admin', 'teacher'],
+    roles: STAFF_ROLES,
   },
   {
     name: 'Settings',
     href: '/dashboard/settings',
     icon: Settings,
-    roles: ['admin', 'teacher', 'student', 'parent'],
+    roles: EVERYONE,
   },
 ];
 

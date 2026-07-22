@@ -8,6 +8,19 @@ import { Role, Resource, Action } from '@educore/shared'
 
 const router = Router()
 
+// Each downstream service mounts its routes at its own '/api/v1/<name>' path
+// (see each service's src/index.ts). Express strips the gateway mount prefix
+// ('/api/v1' + the router.use path below) before the proxy ever sees req.url,
+// so pathRewrite must restore it — otherwise every proxied request 404s
+// against the target service.
+function prefixed(target: string, prefix: string) {
+  return createProxyMiddleware({
+    target,
+    changeOrigin: true,
+    pathRewrite: (path) => `${prefix}${path}`,
+  })
+}
+
 // ─── Auth Service (public + strict rate limit) ────────────────────────────────
 router.use(
   '/auth',
@@ -15,6 +28,7 @@ router.use(
   createProxyMiddleware({
     target: config.services.auth,
     changeOrigin: true,
+    pathRewrite: (path) => `/api/v1/auth${path}`,
     on: {
       error: (err, req, res: any) => {
         res.status(502).json({ success: false, error: 'Auth service unavailable' })
@@ -30,7 +44,7 @@ router.use(
   authenticate,
   requireRole(Role.SUPER_ADMIN, Role.SCHOOL_OWNER, Role.SCHOOL_ADMIN),
   authorize(Resource.TENANT, Action.VIEW),
-  createProxyMiddleware({ target: config.services.tenant, changeOrigin: true })
+  prefixed(config.services.tenant, '/api/v1/tenants')
 )
 
 // ─── Student Service ──────────────────────────────────────────────────────────
@@ -40,7 +54,7 @@ router.use(
   authenticate,
   enforceTenantScope,
   authorize(Resource.STUDENT, Action.VIEW),
-  createProxyMiddleware({ target: config.services.student, changeOrigin: true })
+  prefixed(config.services.student, '/api/v1/students')
 )
 
 // ─── Academic Service ─────────────────────────────────────────────────────────
@@ -50,7 +64,7 @@ router.use(
   authenticate,
   enforceTenantScope,
   authorize(Resource.CLASS, Action.VIEW),
-  createProxyMiddleware({ target: config.services.academic, changeOrigin: true })
+  prefixed(config.services.academic, '/api/v1/academic')
 )
 
 // ─── Finance Service ──────────────────────────────────────────────────────────
@@ -60,7 +74,16 @@ router.use(
   authenticate,
   enforceTenantScope,
   authorize(Resource.FEE, Action.VIEW),
-  createProxyMiddleware({ target: config.services.finance, changeOrigin: true })
+  prefixed(config.services.finance, '/api/v1/finance')
+)
+
+// ─── Analytics Service ─────────────────────────────────────────────────────────
+router.use(
+  '/analytics',
+  generalLimiter,
+  authenticate,
+  enforceTenantScope,
+  prefixed(config.services.analytics, '/api/v1/analytics')
 )
 
 // ─── Notification Service ─────────────────────────────────────────────────────
@@ -70,7 +93,7 @@ router.use(
   generalLimiter,
   authenticate,
   enforceTenantScope,
-  createProxyMiddleware({ target: config.services.notification, changeOrigin: true })
+  prefixed(config.services.notification, '/api/v1/notifications')
 )
 
 // ─── Messaging Service ────────────────────────────────────────────────────────
@@ -80,7 +103,7 @@ router.use(
   generalLimiter,
   authenticate,
   enforceTenantScope,
-  createProxyMiddleware({ target: config.services.notification, changeOrigin: true })
+  prefixed(config.services.notification, '/api/v1/messages')
 )
 
 // ─── Emergency Broadcasts ─────────────────────────────────────────────────────
@@ -90,7 +113,7 @@ router.use(
   generalLimiter,
   authenticate,
   enforceTenantScope,
-  createProxyMiddleware({ target: config.services.notification, changeOrigin: true })
+  prefixed(config.services.notification, '/api/v1/broadcasts')
 )
 
 export default router

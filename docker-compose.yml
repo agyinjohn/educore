@@ -63,6 +63,7 @@ services:
       ANALYTICS_SERVICE_URL: http://analytics-service:4008
       AI_SERVICE_URL: http://ai-service:4009
       CHATBOT_SERVICE_URL: http://chatbot-service:4010
+      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:3001
     depends_on:
       mongodb:
         condition: service_healthy

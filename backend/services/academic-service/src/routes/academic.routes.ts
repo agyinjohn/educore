@@ -6,6 +6,7 @@ import {
   createClassSchema,
   markAttendanceSchema,
   recordGradeSchema,
+  submitGradesSchema,
   publishGradesSchema,
 } from '../types/schemas'
 
@@ -46,6 +47,13 @@ router.post(
 )
 
 router.get('/grades/student/:studentId', controller.getStudentGrades)
+
+router.post(
+  '/grades/submit',
+  authorize(['TEACHER', 'ACADEMIC_HEAD', 'SCHOOL_ADMIN']),
+  validate(submitGradesSchema),
+  controller.submitGrades
+)
 
 router.post(
   '/grades/publish',

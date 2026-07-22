@@ -51,7 +51,6 @@ export interface ResetPasswordRequest {
 }
 
 const TOKEN_KEY = 'auth_token'
-const REFRESH_TOKEN_KEY = 'refresh_token'
 const TOKEN_EXPIRY_KEY = 'token_expiry'
 // Access token TTL in ms — matches backend 15m
 const ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000
@@ -76,13 +75,12 @@ class AuthService {
     return response.data.data
   }
 
+  // Refresh token lives in an httpOnly cookie (set by the backend on login) —
+  // withCredentials on the axios instance sends it automatically.
   async refreshToken(): Promise<string> {
-    const refreshToken = this.getRefreshToken()
-    if (!refreshToken) throw new Error('No refresh token available')
-
     const response = await apiClient.post<{ success: boolean; data: { accessToken: string } }>(
       '/auth/refresh',
-      { refreshToken }
+      {}
     )
     const { accessToken } = response.data.data
     this.setToken(accessToken)
@@ -117,20 +115,9 @@ class AuthService {
     apiClient.setAuthToken(token)
   }
 
-  setRefreshToken(token: string): void {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(REFRESH_TOKEN_KEY, token)
-    }
-  }
-
   getToken(): string | null {
     if (typeof window === 'undefined') return null
     return localStorage.getItem(TOKEN_KEY)
-  }
-
-  getRefreshToken(): string | null {
-    if (typeof window === 'undefined') return null
-    return localStorage.getItem(REFRESH_TOKEN_KEY)
   }
 
   isTokenExpired(): boolean {
@@ -143,7 +130,6 @@ class AuthService {
   clearToken(): void {
     if (typeof window === 'undefined') return
     localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(REFRESH_TOKEN_KEY)
     localStorage.removeItem(TOKEN_EXPIRY_KEY)
     apiClient.clearAuthToken()
   }

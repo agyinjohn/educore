@@ -32,14 +32,16 @@ export interface School {
 }
 
 class TenantService {
-  private baseURL = process.env.NEXT_PUBLIC_TENANT_API_URL || 'http://localhost:4005';
-
   async createSchool(data: CreateSchoolRequest): Promise<ApiResponse<School>> {
-    return apiClient.post<School>(`${this.baseURL}/schools`, data);
+    return apiClient.post<School>('/tenants', data);
   }
 
   async getSchool(id: string): Promise<ApiResponse<School>> {
-    return apiClient.get<School>(`${this.baseURL}/schools/${id}`);
+    return apiClient.get<School>(`/tenants/${id}`);
+  }
+
+  async getSchoolBySubdomain(subdomain: string): Promise<ApiResponse<School>> {
+    return apiClient.get<School>(`/tenants/subdomain/${subdomain}`);
   }
 }
 

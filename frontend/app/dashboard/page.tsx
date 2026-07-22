@@ -26,21 +26,24 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const data = await analyticsService.getDashboardMetrics();
-        setMetrics(data);
+        // Backend only exposes pre-aggregated metric documents scoped to a
+        // date range — there's no single "dashboard KPIs" endpoint.
+        const endDate = new Date();
+        const startDate = new Date(endDate.getFullYear(), 0, 1);
+        const res = await analyticsService.getDashboardOverview(
+          startDate.toISOString(),
+          endDate.toISOString()
+        );
+        const { attendance, grades, enrollment } = res.data.dashboard;
+        setMetrics({
+          totalStudents: enrollment?.value ?? null,
+          attendanceRate: attendance?.value ?? null,
+          averageGrade: grades?.value ?? null,
+        });
       } catch (error) {
         console.error('Failed to fetch metrics:', error);
-        // Use mock data for demo
-        setMetrics({
-          totalStudents: 1234,
-          totalCourses: 45,
-          totalRevenue: 125000,
-          attendanceRate: 92.5,
-          studentGrowth: { value: 156, percentage: 12.5, isPositive: true },
-          courseGrowth: { value: 5, percentage: 11.1, isPositive: true },
-          revenueGrowth: { value: 15000, percentage: 13.6, isPositive: true },
-          attendanceChange: { value: 2.3, percentage: 2.5, isPositive: true },
-        });
+        // No metrics computed yet for this school — show empty state, not fake numbers.
+        setMetrics(null);
       } finally {
         setIsLoading(false);
       }
@@ -57,9 +60,9 @@ export default function DashboardPage() {
       icon: Users,
     },
     {
-      title: 'New Course',
-      description: 'Create a new course',
-      href: '/dashboard/courses/new',
+      title: 'New Class',
+      description: 'Create a new class',
+      href: '/dashboard/classes/new',
       icon: BookOpen,
     },
     {
@@ -89,48 +92,42 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
           <>
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-32 rounded-lg" />
             ))}
           </>
         ) : (
           <>
             <KPICard
-              title="Total Students"
-              value={metrics?.totalStudents || 0}
-              change={metrics?.studentGrowth}
+              title="Enrollment"
+              value={metrics?.totalStudents ?? '—'}
               icon={Users}
-              description="Enrolled this month"
-              onClick={() => {}}
-            />
-            <KPICard
-              title="Active Courses"
-              value={metrics?.totalCourses || 0}
-              change={metrics?.courseGrowth}
-              icon={BookOpen}
-              description="Ongoing courses"
-              onClick={() => {}}
-            />
-            <KPICard
-              title="Revenue"
-              value={`$${(metrics?.totalRevenue / 1000).toFixed(1)}k`}
-              change={metrics?.revenueGrowth}
-              icon={DollarSign}
-              description="This month"
+              description="Year-to-date metric"
               onClick={() => {}}
             />
             <KPICard
               title="Attendance Rate"
-              value={`${metrics?.attendanceRate || 0}%`}
-              change={metrics?.attendanceChange}
+              value={metrics?.attendanceRate != null ? `${metrics.attendanceRate}%` : '—'}
               icon={TrendingUp}
-              description="Average attendance"
+              description="Year-to-date metric"
+              onClick={() => {}}
+            />
+            <KPICard
+              title="Average Grade"
+              value={metrics?.averageGrade != null ? `${metrics.averageGrade}%` : '—'}
+              icon={DollarSign}
+              description="Year-to-date metric"
               onClick={() => {}}
             />
           </>
+        )}
+        {!isLoading && !metrics && (
+          <p className="md:col-span-2 lg:col-span-3 text-sm text-gray-400">
+            No analytics have been computed for this school yet.
+          </p>
         )}
       </div>
 

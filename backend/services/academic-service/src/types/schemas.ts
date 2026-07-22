@@ -42,7 +42,15 @@ export const recordGradeSchema = z.object({
     score: z.number().min(0),
     maxScore: z.number().optional(),
     term: z.string(),
+    academicYear: z.string(),
     feedback: z.string().optional(),
+  }),
+})
+
+export const submitGradesSchema = z.object({
+  body: z.object({
+    term: z.string(),
+    academicYear: z.string(),
   }),
 })
 

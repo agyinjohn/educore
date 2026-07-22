@@ -9,24 +9,20 @@ import { studentService, type Student, type CreateStudentRequest, type StudentLi
 
 import {
   academicService,
-  type Course,
   type Class,
   type Grade,
-  type Enrollment,
-  type CreateCourseRequest,
+  type Attendance,
   type CreateClassRequest,
 } from './academic.service';
 
 import {
   financeService,
-  type FeeStructure,
-  type StudentFee,
+  type Fee,
   type Payment,
   type Invoice,
-  type FinancialReport,
 } from './finance.service';
 
-import { analyticsService, type DashboardMetrics, type StudentAnalytics } from './analytics.service';
+import { analyticsService, type DashboardOverview } from './analytics.service';
 import { tenantService, type School, type CreateSchoolRequest } from './tenant.service';
 
 // Re-export all types
@@ -38,19 +34,14 @@ export type {
   Student,
   CreateStudentRequest,
   StudentListParams,
-  Course,
   Class,
   Grade,
-  Enrollment,
-  CreateCourseRequest,
+  Attendance,
   CreateClassRequest,
-  FeeStructure,
-  StudentFee,
+  Fee,
   Payment,
   Invoice,
-  FinancialReport,
-  DashboardMetrics,
-  StudentAnalytics,
+  DashboardOverview,
   School,
   CreateSchoolRequest,
 };
