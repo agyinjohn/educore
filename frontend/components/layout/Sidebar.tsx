@@ -14,6 +14,8 @@ import {
   Settings,
   FileText,
   ShieldCheck,
+  Bell,
+  MessageSquare,
   Menu,
 } from 'lucide-react';
 
@@ -60,6 +62,18 @@ const navigation = [
     href: '/dashboard/analytics',
     icon: BarChart3,
     roles: STAFF_ROLES,
+  },
+  {
+    name: 'Notifications',
+    href: '/dashboard/notifications',
+    icon: Bell,
+    roles: EVERYONE,
+  },
+  {
+    name: 'Messages',
+    href: '/dashboard/messages',
+    icon: MessageSquare,
+    roles: [...STAFF_ROLES, 'PARENT'],
   },
   {
     name: 'Reports',

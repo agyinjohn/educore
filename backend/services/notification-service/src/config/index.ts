@@ -17,8 +17,8 @@ export const config = {
   // Redis / Event Bus
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
 
-  // JWT
-  jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
+  // JWT — must match the secret auth-service signs with (JWT_ACCESS_SECRET)
+  jwtSecret: process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'dev-secret-change-in-production',
   jwtExpiry: process.env.JWT_EXPIRY || '15m',
 
   // Email / SMS providers (Phase 4 integrations)

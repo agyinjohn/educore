@@ -99,20 +99,32 @@ export interface Assessment {
   id: string;
   school_id: string;
   class_id: string;
+  subject_id: string;
   name: string;
-  type: string;
-  totalMarks: number;
-  weight: number;
+  type: AssessmentType;
+  maxScore: number;
+  weight?: number;
+  description?: string;
+  date: string;
   term: string;
+  academicYear: string;
+  dueDate?: string;
 }
+
+export type AssessmentType = 'quiz' | 'test' | 'exam' | 'project' | 'assignment' | 'classwork';
 
 export interface CreateAssessmentRequest {
   class_id: string;
+  subject_id: string;
   name: string;
-  type: string;
-  totalMarks: number;
-  weight: number;
+  type: AssessmentType;
+  maxScore: number;
+  weight?: number;
+  description?: string;
+  date: string;
   term: string;
+  academicYear: string;
+  dueDate?: string;
 }
 
 export interface TimetableSlot {

@@ -2,11 +2,15 @@ import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import { config } from '../config'
 
+// Matches the real token shape auth-service signs (JwtPayload in
+// @educore/shared): { sub, schoolId, role, email }. This previously read
+// userId/school_id, which don't exist on the token, so every authenticated
+// request here had req.userId/req.schoolId silently undefined.
 export interface AuthPayload {
-  userId: string
+  sub: string
   email: string
   role: string
-  school_id: string
+  schoolId: string
   iat: number
   exp: number
 }
@@ -36,9 +40,9 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
 
   try {
     const decoded = jwt.verify(token, config.jwtSecret) as AuthPayload
-    req.userId = decoded.userId
+    req.userId = decoded.sub
     req.userRole = decoded.role
-    req.schoolId = decoded.school_id
+    req.schoolId = decoded.schoolId
     req.user = decoded
     next()
   } catch (error) {

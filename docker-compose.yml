@@ -53,6 +53,7 @@ services:
       PORT: 3000
       MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
       REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-${JWT_SECRET:-educore-secret-key}}
       AUTH_SERVICE_URL: http://auth-service:4000
       STUDENT_SERVICE_URL: http://student-service:4001
       ACADEMIC_SERVICE_URL: http://academic-service:4002
@@ -61,7 +62,7 @@ services:
       TENANT_SERVICE_URL: http://tenant-service:4005
       REPORT_SERVICE_URL: http://report-service:4009
       ANALYTICS_SERVICE_URL: http://analytics-service:4008
-      AI_SERVICE_URL: http://ai-service:4009
+      AI_SERVICE_URL: http://ai-service:4011
       CHATBOT_SERVICE_URL: http://chatbot-service:4010
       ALLOWED_ORIGINS: http://localhost:3000,http://localhost:3001
     depends_on:
@@ -87,6 +88,7 @@ services:
       MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-educore-secret-key}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-${JWT_SECRET:-educore-secret-key}}
       JWT_EXPIRE: 7d
     depends_on:
       mongodb:
@@ -110,6 +112,7 @@ services:
       PORT: 4001
       MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
       REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_ACCESS_SECRET:-${JWT_SECRET:-educore-secret-key}}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -132,6 +135,7 @@ services:
       PORT: 4002
       MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
       REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_ACCESS_SECRET:-${JWT_SECRET:-educore-secret-key}}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -176,6 +180,7 @@ services:
       PORT: 4004
       MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
       REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-${JWT_SECRET:-educore-secret-key}}
       SMTP_HOST: ${SMTP_HOST:-mailhog}
       SMTP_PORT: ${SMTP_PORT:-1025}
     depends_on:
@@ -253,17 +258,18 @@ services:
       - educore-network
     restart: unless-stopped
 
-  # AI Service - Port 4009
+  # AI Service - Port 4011 (was 4009, which collides with report-service's
+  # host port binding — docker-compose up would fail to start both)
   ai-service:
     build:
       context: ./backend/services/ai-service
       dockerfile: Dockerfile
     container_name: educore-ai-service
     ports:
-      - '4009:4009'
+      - '4011:4011'
     environment:
       NODE_ENV: development
-      PORT: 4009
+      PORT: 4011
       MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
       REDIS_URL: redis://redis:6379
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

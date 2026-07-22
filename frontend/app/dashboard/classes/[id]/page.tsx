@@ -8,7 +8,7 @@ import { studentService, Student } from '@/lib/services/student.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, GraduationCap, CalendarClock, AlertTriangle, Users2 } from 'lucide-react';
+import { ArrowLeft, GraduationCap, CalendarClock, CalendarCheck, ClipboardList, AlertTriangle, Users2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const CURRENT_ACADEMIC_YEAR = (() => {
@@ -78,7 +78,19 @@ export default function ClassDetailPage() {
             <p className="text-gray-500 text-sm">{cls?.academicYear}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link href={`/dashboard/classes/${id}/attendance`}>
+            <Button variant="outline" className="flex items-center gap-2">
+              <CalendarCheck className="h-4 w-4" />
+              Attendance
+            </Button>
+          </Link>
+          <Link href={`/dashboard/classes/${id}/assessments`}>
+            <Button variant="outline" className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Assessments
+            </Button>
+          </Link>
           <Link href={`/dashboard/classes/${id}/timetable`}>
             <Button variant="outline" className="flex items-center gap-2">
               <CalendarClock className="h-4 w-4" />

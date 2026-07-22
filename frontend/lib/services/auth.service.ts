@@ -107,6 +107,18 @@ class AuthService {
     await apiClient.post('/auth/change-password', request)
   }
 
+  async setupMfa(): Promise<{ secret: string; otpAuthUrl: string }> {
+    const response = await apiClient.post<{ success: boolean; data: { secret: string; otpAuthUrl: string } }>(
+      '/auth/mfa/setup',
+      {}
+    )
+    return response.data.data
+  }
+
+  async verifyMfa(secret: string, totpCode: string): Promise<void> {
+    await apiClient.post('/auth/mfa/verify', { secret, totpCode })
+  }
+
   // ─── Token Management ───────────────────────────────────────────────────────
   setToken(token: string): void {
     if (typeof window === 'undefined') return

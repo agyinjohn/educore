@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTheme } from 'next-themes';
 import { useAuth } from '@/lib/contexts/auth.context';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,7 +16,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Menu, LogOut, User, Settings, Moon, Sun } from 'lucide-react';
-import { useState } from 'react';
 
 interface TopNavProps {
   onMenuClick: () => void;
@@ -24,7 +24,12 @@ interface TopNavProps {
 export default function TopNav({ onMenuClick }: TopNavProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const [isDark, setIsDark] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
+  // Avoid rendering theme-dependent UI until mounted client-side, since
+  // the server has no way to know the user's preferred/stored theme.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === 'dark';
 
   const handleLogout = async () => {
     try {
@@ -66,7 +71,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setIsDark(!isDark)}
+          onClick={() => setTheme(isDark ? 'light' : 'dark')}
           className="rounded-lg"
         >
           {isDark ? (
