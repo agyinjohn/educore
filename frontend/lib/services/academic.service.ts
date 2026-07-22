@@ -1,115 +1,150 @@
 // Academic Service API Client
-// Handles courses, classes, grades, and academic management
+// Handles classes, attendance, grades, assessments, and timetable.
+// Matches backend/services/academic-service routes exactly (mounted at /academic
+// behind the API gateway, which forwards to the service's /api/v1/academic).
 
 import { apiClient, ApiResponse } from '../api-client';
 
 // ============================================================================
-// Types & Interfaces
+// Types & Interfaces (mirror backend Mongoose models)
 // ============================================================================
-
-export interface Course {
-  id: string;
-  name: string;
-  code: string;
-  description: string;
-  credits: number;
-  semester: string;
-  instructor: string;
-  instructorId: string;
-  duration: number;
-  enrollmentLimit: number;
-  status: 'active' | 'inactive' | 'archived';
-  createdAt: string;
-  updatedAt: string;
-}
 
 export interface Class {
   id: string;
+  school_id: string;
   name: string;
-  classCode: string;
-  level: string;
   section?: string;
   academicYear: string;
-  courseId: string;
-  teacherId: string;
-  capacity: number;
-  currentEnrollment: number;
-  schedule?: Schedule[];
-  status: 'active' | 'inactive';
+  teacher_id?: string;
+  capacity?: number;
+  gradeLevel?: string;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface Schedule {
-  day: string;
-  startTime: string;
-  endTime: string;
-  room: string;
-}
-
-export interface Grade {
-  id: string;
-  studentId: string;
-  courseId: string;
-  classId: string;
-  marks: number;
-  outOfMarks: number;
-  percentage: number;
-  grade: string;
-  gradingScale: string;
-  remarks?: string;
-  issuedDate: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Enrollment {
-  id: string;
-  studentId: string;
-  classId: string;
-  courseId: string;
-  enrollmentDate: string;
-  status: 'active' | 'inactive' | 'dropped' | 'completed';
-  completionDate?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateCourseRequest {
-  name: string;
-  code: string;
-  description?: string;
-  credits: number;
-  semester: string;
-  instructorId: string;
-  duration: number;
-  enrollmentLimit: number;
 }
 
 export interface CreateClassRequest {
   name: string;
-  classCode: string;
-  level: string;
   section?: string;
   academicYear: string;
-  courseId: string;
-  teacherId: string;
-  capacity: number;
-  schedule?: Schedule[];
+  teacher_id?: string;
+  capacity?: number;
+  gradeLevel?: string;
 }
 
-export interface EnrollStudentRequest {
-  studentId: string;
-  classId: string;
-  courseId: string;
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
+export interface Attendance {
+  id: string;
+  school_id: string;
+  student_id: string;
+  class_id: string;
+  subject_id?: string;
+  date: string;
+  period: number;
+  status: AttendanceStatus;
+  note?: string;
 }
 
-export interface GradeRequest {
-  studentId: string;
-  courseId: string;
-  marks: number;
-  outOfMarks?: number;
-  remarks?: string;
+export interface MarkAttendanceRequest {
+  student_id: string;
+  class_id: string;
+  subject_id?: string;
+  date: string;
+  period: number;
+  status: AttendanceStatus;
+  note?: string;
+}
+
+export interface AttendanceStats {
+  totalDays: number;
+  presentDays: number;
+  absentDays: number;
+  lateDays: number;
+  attendancePercentage: number;
+}
+
+export type GradeStatus = 'draft' | 'submitted' | 'published';
+
+export interface Grade {
+  id: string;
+  school_id: string;
+  student_id: string;
+  subject_id: string;
+  assessment_id?: string;
+  score: number;
+  maxScore?: number;
+  percentage?: number;
+  grade?: string;
+  term: string;
+  academicYear: string;
+  status: GradeStatus;
+  feedback?: string;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RecordGradeRequest {
+  student_id: string;
+  subject_id: string;
+  assessment_id?: string;
+  score: number;
+  maxScore?: number;
+  term: string;
+  academicYear: string;
+  feedback?: string;
+}
+
+export interface Assessment {
+  id: string;
+  school_id: string;
+  class_id: string;
+  name: string;
+  type: string;
+  totalMarks: number;
+  weight: number;
+  term: string;
+}
+
+export interface CreateAssessmentRequest {
+  class_id: string;
+  name: string;
+  type: string;
+  totalMarks: number;
+  weight: number;
+  term: string;
+}
+
+export interface TimetableSlot {
+  id: string;
+  class_id: string;
+  teacher_id: string;
+  subject: string;
+  dayOfWeek: string;
+  period: number;
+  startTime: string;
+  endTime: string;
+  academicYear: string;
+  term: string;
+}
+
+export interface CreateTimetableSlotRequest {
+  class_id: string;
+  teacher_id: string;
+  subject: string;
+  dayOfWeek: string;
+  period: number;
+  startTime: string;
+  endTime: string;
+  academicYear: string;
+  term: string;
+}
+
+export interface AtRiskStudent {
+  student_id: string;
+  attendancePercentage: number;
+  averageGrade: number;
+  reasons: string[];
 }
 
 // ============================================================================
@@ -117,154 +152,115 @@ export interface GradeRequest {
 // ============================================================================
 
 export class AcademicService {
-  private baseURL: string;
-
-  constructor(baseURL?: string) {
-    this.baseURL =
-      baseURL || process.env.NEXT_PUBLIC_ACADEMIC_API_URL || 'http://localhost:4002';
-  }
-
-  // ==================== Courses ====================
-
-  // Get all courses
-  async getCourses(params?: { page?: number; limit?: number; search?: string }): Promise<
-    ApiResponse<{
-      courses: Course[];
-      total: number;
-      page: number;
-      limit: number;
-    }>
-  > {
-    const query = params
-      ? `?${Object.entries(params)
-          .map(([k, v]) => `${k}=${v}`)
-          .join('&')}`
-      : '';
-    return apiClient.get<any>(`${this.baseURL}/courses${query}`);
-  }
-
-  // Get course by ID
-  async getCourse(id: string): Promise<ApiResponse<Course>> {
-    return apiClient.get<Course>(`${this.baseURL}/courses/${id}`);
-  }
-
-  // Create course
-  async createCourse(request: CreateCourseRequest): Promise<ApiResponse<Course>> {
-    return apiClient.post<Course>(`${this.baseURL}/courses`, request);
-  }
-
-  // Update course
-  async updateCourse(id: string, request: Partial<CreateCourseRequest>): Promise<ApiResponse<Course>> {
-    return apiClient.put<Course>(`${this.baseURL}/courses/${id}`, request);
-  }
-
-  // Delete course
-  async deleteCourse(id: string): Promise<ApiResponse<{ message: string }>> {
-    return apiClient.delete(`${this.baseURL}/courses/${id}`);
-  }
-
   // ==================== Classes ====================
 
-  // Get all classes
-  async getClasses(params?: { page?: number; limit?: number; search?: string }): Promise<
-    ApiResponse<{
-      classes: Class[];
-      total: number;
-      page: number;
-      limit: number;
-    }>
-  > {
-    const query = params
-      ? `?${Object.entries(params)
-          .map(([k, v]) => `${k}=${v}`)
-          .join('&')}`
-      : '';
-    return apiClient.get<any>(`${this.baseURL}/classes${query}`);
+  async getClasses(academicYear: string): Promise<ApiResponse<Class[]>> {
+    return apiClient.get<Class[]>(`/academic/classes?academicYear=${encodeURIComponent(academicYear)}`);
   }
 
-  // Get class by ID
-  async getClass(id: string): Promise<ApiResponse<Class>> {
-    return apiClient.get<Class>(`${this.baseURL}/classes/${id}`);
-  }
-
-  // Create class
   async createClass(request: CreateClassRequest): Promise<ApiResponse<Class>> {
-    return apiClient.post<Class>(`${this.baseURL}/classes`, request);
+    return apiClient.post<Class>('/academic/classes', request);
   }
 
-  // Update class
-  async updateClass(id: string, request: Partial<CreateClassRequest>): Promise<ApiResponse<Class>> {
-    return apiClient.put<Class>(`${this.baseURL}/classes/${id}`, request);
+  // ==================== Attendance ====================
+
+  async markAttendance(request: MarkAttendanceRequest): Promise<ApiResponse<Attendance>> {
+    return apiClient.post<Attendance>('/academic/attendance', request);
   }
 
-  // Delete class
-  async deleteClass(id: string): Promise<ApiResponse<{ message: string }>> {
-    return apiClient.delete(`${this.baseURL}/classes/${id}`);
+  async markBulkAttendance(records: MarkAttendanceRequest[]): Promise<ApiResponse<Attendance[]>> {
+    return apiClient.post<Attendance[]>('/academic/attendance/bulk', { records });
   }
 
-  // ==================== Enrollments ====================
-
-  // Get student enrollments
-  async getStudentEnrollments(studentId: string): Promise<ApiResponse<Enrollment[]>> {
-    return apiClient.get<Enrollment[]>(`${this.baseURL}/students/${studentId}/enrollments`);
+  async getStudentAttendance(studentId: string): Promise<ApiResponse<Attendance[]>> {
+    return apiClient.get<Attendance[]>(`/academic/attendance/student/${studentId}`);
   }
 
-  // Get class enrollments
-  async getClassEnrollments(classId: string): Promise<
-    ApiResponse<{
-      enrollments: Enrollment[];
-      total: number;
-    }>
-  > {
-    return apiClient.get<any>(`${this.baseURL}/classes/${classId}/enrollments`);
+  async getClassAttendance(classId: string, date?: string): Promise<ApiResponse<Attendance[]>> {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return apiClient.get<Attendance[]>(`/academic/attendance/class/${classId}${query}`);
   }
 
-  // Enroll student in class
-  async enrollStudent(request: EnrollStudentRequest): Promise<ApiResponse<Enrollment>> {
-    return apiClient.post<Enrollment>(`${this.baseURL}/enrollments`, request);
+  async getAttendanceStats(studentId: string, term?: string): Promise<ApiResponse<AttendanceStats>> {
+    const query = term ? `?term=${encodeURIComponent(term)}` : '';
+    return apiClient.get<AttendanceStats>(`/academic/attendance/stats/student/${studentId}${query}`);
   }
 
-  // Unenroll student from class
-  async unenrollStudent(enrollmentId: string): Promise<ApiResponse<{ message: string }>> {
-    return apiClient.delete(`${this.baseURL}/enrollments/${enrollmentId}`);
+  async getClassAttendanceStats(classId: string, date?: string): Promise<ApiResponse<any>> {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return apiClient.get<any>(`/academic/attendance/stats/class/${classId}${query}`);
   }
 
   // ==================== Grades ====================
 
-  // Get student grades
-  async getStudentGrades(studentId: string): Promise<ApiResponse<Grade[]>> {
-    return apiClient.get<Grade[]>(`${this.baseURL}/students/${studentId}/grades`);
+  async recordGrade(request: RecordGradeRequest): Promise<ApiResponse<Grade>> {
+    return apiClient.post<Grade>('/academic/grades', request);
   }
 
-  // Get class grades
-  async getClassGrades(classId: string): Promise<
-    ApiResponse<{
-      grades: Grade[];
-      classAverage: number;
-    }>
-  > {
-    return apiClient.get<any>(`${this.baseURL}/classes/${classId}/grades`);
+  async getStudentGrades(studentId: string, term: string): Promise<ApiResponse<Grade[]>> {
+    return apiClient.get<Grade[]>(`/academic/grades/student/${studentId}?term=${encodeURIComponent(term)}`);
   }
 
-  // Add grade
-  async addGrade(request: GradeRequest): Promise<ApiResponse<Grade>> {
-    return apiClient.post<Grade>(`${this.baseURL}/grades`, request);
+  // Submit draft grades for approval (draft -> submitted)
+  async submitGrades(term: string, academicYear: string): Promise<ApiResponse<{ modifiedCount: number }>> {
+    return apiClient.post('/academic/grades/submit', { term, academicYear });
   }
 
-  // Update grade
-  async updateGrade(id: string, request: Partial<GradeRequest>): Promise<ApiResponse<Grade>> {
-    return apiClient.put<Grade>(`${this.baseURL}/grades/${id}`, request);
+  // Publish submitted grades so students/parents can see them (submitted -> published)
+  async publishGrades(term: string, academicYear: string): Promise<ApiResponse<{ modifiedCount: number }>> {
+    return apiClient.post('/academic/grades/publish', { term, academicYear });
   }
 
-  // Get student transcript
-  async getTranscript(studentId: string): Promise<ApiResponse<{
-    studentName: string;
-    enrollmentNumber: string;
-    courses: (Course & { grade: Grade })[];
-    gpa: number;
-    totalCredits: number;
-  }>> {
-    return apiClient.get<any>(`${this.baseURL}/students/${studentId}/transcript`);
+  async getTermAverageGrades(classId: string, term: string): Promise<ApiResponse<any>> {
+    return apiClient.get<any>(`/academic/grades/term-averages/${classId}?term=${encodeURIComponent(term)}`);
+  }
+
+  async getStudentRankInClass(studentId: string, term: string): Promise<ApiResponse<any>> {
+    return apiClient.get<any>(`/academic/grades/student-rank/${studentId}?term=${encodeURIComponent(term)}`);
+  }
+
+  async getGradeDistribution(classId: string, term: string): Promise<ApiResponse<any>> {
+    return apiClient.get<any>(`/academic/grades/distribution/${classId}?term=${encodeURIComponent(term)}`);
+  }
+
+  // ==================== Assessments ====================
+
+  async createAssessment(request: CreateAssessmentRequest): Promise<ApiResponse<Assessment>> {
+    return apiClient.post<Assessment>('/academic/assessments', request);
+  }
+
+  async listAssessments(classId: string, term: string): Promise<ApiResponse<Assessment[]>> {
+    return apiClient.get<Assessment[]>(
+      `/academic/assessments?classId=${encodeURIComponent(classId)}&term=${encodeURIComponent(term)}`
+    );
+  }
+
+  // ==================== Timetable ====================
+
+  async createTimetableSlot(request: CreateTimetableSlotRequest): Promise<ApiResponse<TimetableSlot>> {
+    return apiClient.post<TimetableSlot>('/academic/timetable', request);
+  }
+
+  async getTimetableForClass(
+    classId: string,
+    academicYear: string,
+    term: string
+  ): Promise<ApiResponse<TimetableSlot[]>> {
+    return apiClient.get<TimetableSlot[]>(
+      `/academic/timetable/class/${classId}?academicYear=${encodeURIComponent(academicYear)}&term=${encodeURIComponent(term)}`
+    );
+  }
+
+  // ==================== At-Risk Students ====================
+
+  async getAtRiskStudents(
+    classId: string,
+    attendanceThreshold = 80,
+    gradeThreshold = 65
+  ): Promise<ApiResponse<AtRiskStudent[]>> {
+    return apiClient.get<AtRiskStudent[]>(
+      `/academic/at-risk/${classId}?attendanceThreshold=${attendanceThreshold}&gradeThreshold=${gradeThreshold}`
+    );
   }
 }
 

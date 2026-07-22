@@ -57,6 +57,7 @@ export class ApiClient {
     this.instance = axios.create({
       baseURL: this.config.baseURL,
       timeout: this.config.timeout,
+      withCredentials: true, // send the httpOnly refresh-token cookie
       headers: {
         'Content-Type': 'application/json',
       },

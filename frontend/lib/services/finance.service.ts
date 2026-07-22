@@ -1,97 +1,108 @@
 // Finance Service API Client
-// Handles fees, payments, invoices, and financial transactions
+// Matches backend/services/finance-service exactly (mounted at /finance
+// behind the API gateway).
 
 import { apiClient, ApiResponse } from '../api-client';
 
 // ============================================================================
-// Types & Interfaces
+// Types & Interfaces (mirror the backend Mongoose models)
 // ============================================================================
 
-export interface FeeStructure {
+export type FeeType = 'tuition' | 'transport' | 'meal' | 'sports' | 'other';
+export type FeeFrequency = 'once' | 'monthly' | 'quarterly' | 'annually';
+
+export interface Fee {
   id: string;
-  classId: string;
+  schoolId: string;
+  name: string;
+  description?: string;
+  amount: number;
+  currency: string;
+  feeType: FeeType;
+  applicableGrades?: string[];
+  frequency: FeeFrequency;
   academicYear: string;
-  tuitionFee: number;
-  labFee: number;
-  libraryFee: number;
-  activityFee: number;
-  otherFees: Record<string, number>;
-  totalFee: number;
-  dueDate: string;
-  penalties?: Penalty[];
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface StudentFee {
-  id: string;
-  studentId: string;
-  feeStructureId: string;
+export interface CreateFeeRequest {
+  schoolId: string;
+  name: string;
+  description?: string;
+  amount: number;
+  feeType: FeeType;
+  applicableGrades?: string[];
+  frequency: FeeFrequency;
   academicYear: string;
-  totalAmount: number;
-  paidAmount: number;
-  balance: number;
-  dueDate: string;
-  status: 'pending' | 'partial' | 'paid' | 'overdue';
-  lastPaymentDate?: string;
-  createdAt: string;
-  updatedAt: string;
 }
+
+export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
+export type PaymentMethod = 'credit_card' | 'debit_card' | 'upi' | 'bank_transfer' | 'cash';
 
 export interface Payment {
   id: string;
-  studentFeeId: string;
+  schoolId: string;
+  studentId: string;
+  feeIds: string[];
   amount: number;
-  paymentMethod: 'bank_transfer' | 'credit_card' | 'debit_card' | 'check' | 'cash';
-  transactionId: string;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
-  paymentDate: string;
-  reference: string;
-  remarks?: string;
+  currency: string;
+  paymentMethod: PaymentMethod;
+  status: PaymentStatus;
+  transactionId?: string;
+  referenceNumber: string;
+  payerName: string;
+  payerEmail: string;
+  payerPhone?: string;
+  paidAt?: string;
   createdAt: string;
-  updatedAt: string;
+}
+
+export interface RecordPaymentRequest {
+  schoolId: string;
+  studentId: string;
+  feeIds: string[];
+  amount: number;
+  paymentMethod: PaymentMethod;
+  payerName: string;
+  payerEmail: string;
+  payerPhone?: string;
+}
+
+export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+
+export interface InvoiceLine {
+  feeId: string;
+  name: string;
+  amount: number;
+  quantity?: number;
 }
 
 export interface Invoice {
   id: string;
-  invoiceNumber: string;
+  schoolId: string;
   studentId: string;
-  studentFeeId: string;
-  amount: number;
-  paidAmount: number;
-  dueDate: string;
+  invoiceNumber: string;
+  fees: InvoiceLine[];
+  totalAmount: number;
+  currency: string;
+  status: InvoiceStatus;
   issueDate: string;
-  status: 'draft' | 'issued' | 'partial_paid' | 'paid' | 'overdue' | 'cancelled';
-  items: InvoiceItem[];
+  dueDate: string;
+  amountPaid: number;
+  outstandingAmount: number;
   notes?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
-export interface InvoiceItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  amount: number;
-}
-
-export interface Penalty {
-  id: string;
-  type: string;
-  percentage: number;
-  amount: number;
-  appliedAfterDays: number;
-  description: string;
-}
-
-export interface FinancialReport {
-  totalFees: number;
-  totalCollected: number;
-  pendingAmount: number;
-  overdueAmount: number;
-  collectionPercentage: number;
-  period: string;
+// The backend looks up each fee by ID server-side and builds line items —
+// it does not accept client-supplied names/amounts.
+export interface GenerateInvoiceRequest {
+  schoolId: string;
+  studentId: string;
+  feeIds: string[];
+  dueDate: string;
+  notes?: string;
 }
 
 // ============================================================================
@@ -99,172 +110,91 @@ export interface FinancialReport {
 // ============================================================================
 
 export class FinanceService {
-  private baseURL: string;
+  // ==================== Fees ====================
 
-  constructor(baseURL?: string) {
-    this.baseURL =
-      baseURL || process.env.NEXT_PUBLIC_FINANCE_API_URL || 'http://localhost:4003';
+  async createFee(request: CreateFeeRequest): Promise<ApiResponse<Fee>> {
+    return apiClient.post<Fee>('/finance/fees/create', request);
   }
 
-  // ==================== Fee Structure ====================
-
-  // Get fee structure
-  async getFeeStructure(id: string): Promise<ApiResponse<FeeStructure>> {
-    return apiClient.get<FeeStructure>(`${this.baseURL}/fee-structures/${id}`);
+  async getFee(id: string, schoolId: string): Promise<ApiResponse<Fee>> {
+    return apiClient.get<Fee>(`/finance/fees/${id}?schoolId=${encodeURIComponent(schoolId)}`);
   }
 
-  // Get all fee structures
-  async getFeeStructures(params?: { classId?: string; academicYear?: string }): Promise<
-    ApiResponse<FeeStructure[]>
-  > {
-    const query = params
-      ? `?${Object.entries(params)
-          .map(([k, v]) => `${k}=${v}`)
-          .join('&')}`
-      : '';
-    return apiClient.get<FeeStructure[]>(`${this.baseURL}/fee-structures${query}`);
+  async listFees(schoolId: string, params?: { academicYear?: string; feeType?: string }): Promise<ApiResponse<Fee[]>> {
+    const query = new URLSearchParams({ schoolId, ...params } as Record<string, string>).toString();
+    return apiClient.get<Fee[]>(`/finance/fees?${query}`);
   }
 
-  // Create fee structure
-  async createFeeStructure(request: Omit<FeeStructure, 'id' | 'createdAt' | 'updatedAt'>): Promise<
-    ApiResponse<FeeStructure>
-  > {
-    return apiClient.post<FeeStructure>(`${this.baseURL}/fee-structures`, request);
+  async updateFee(id: string, request: Partial<CreateFeeRequest>): Promise<ApiResponse<Fee>> {
+    return apiClient.patch<Fee>(`/finance/fees/${id}`, request);
   }
 
-  // Update fee structure
-  async updateFeeStructure(
-    id: string,
-    request: Partial<Omit<FeeStructure, 'id' | 'createdAt' | 'updatedAt'>>
-  ): Promise<ApiResponse<FeeStructure>> {
-    return apiClient.put<FeeStructure>(`${this.baseURL}/fee-structures/${id}`, request);
-  }
-
-  // ==================== Student Fees ====================
-
-  // Get student fees
-  async getStudentFees(studentId: string): Promise<ApiResponse<StudentFee[]>> {
-    return apiClient.get<StudentFee[]>(`${this.baseURL}/students/${studentId}/fees`);
-  }
-
-  // Get student fee details
-  async getStudentFeeDetail(studentFeeId: string): Promise<ApiResponse<StudentFee>> {
-    return apiClient.get<StudentFee>(`${this.baseURL}/student-fees/${studentFeeId}`);
-  }
-
-  // Create student fee
-  async createStudentFee(request: Omit<StudentFee, 'id' | 'paidAmount' | 'status' | 'createdAt' | 'updatedAt'>): Promise<
-    ApiResponse<StudentFee>
-  > {
-    return apiClient.post<StudentFee>(`${this.baseURL}/student-fees`, request);
+  async deleteFee(id: string, schoolId: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/finance/fees/${id}?schoolId=${encodeURIComponent(schoolId)}`);
   }
 
   // ==================== Payments ====================
 
-  // Get payments for student fee
-  async getPayments(studentFeeId: string): Promise<ApiResponse<Payment[]>> {
-    return apiClient.get<Payment[]>(`${this.baseURL}/student-fees/${studentFeeId}/payments`);
+  async recordPayment(request: RecordPaymentRequest): Promise<ApiResponse<Payment>> {
+    return apiClient.post<Payment>('/finance/payments/record', request);
   }
 
-  // Record payment
-  async recordPayment(request: Omit<Payment, 'id' | 'createdAt' | 'updatedAt'>): Promise<
-    ApiResponse<Payment>
-  > {
-    return apiClient.post<Payment>(`${this.baseURL}/payments`, request);
+  async getPayment(id: string, schoolId: string): Promise<ApiResponse<Payment>> {
+    return apiClient.get<Payment>(`/finance/payments/${id}?schoolId=${encodeURIComponent(schoolId)}`);
   }
 
-  // Get payment details
-  async getPayment(paymentId: string): Promise<ApiResponse<Payment>> {
-    return apiClient.get<Payment>(`${this.baseURL}/payments/${paymentId}`);
+  async getStudentPayments(studentId: string, schoolId: string): Promise<ApiResponse<Payment[]>> {
+    return apiClient.get<Payment[]>(`/finance/payments/student/${studentId}/${schoolId}`);
   }
 
-  // Refund payment
-  async refundPayment(paymentId: string, reason: string): Promise<ApiResponse<Payment>> {
-    return apiClient.post<Payment>(`${this.baseURL}/payments/${paymentId}/refund`, { reason });
+  async getOutstandingPayments(schoolId: string, studentId?: string): Promise<ApiResponse<Payment[]>> {
+    const query = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
+    return apiClient.get<Payment[]>(`/finance/payments/outstanding/${schoolId}${query}`);
+  }
+
+  async getPaymentsByStatus(schoolId: string, status: PaymentStatus, limit?: number): Promise<ApiResponse<Payment[]>> {
+    const query = limit ? `?limit=${limit}` : '';
+    return apiClient.get<Payment[]>(`/finance/payments/status/${schoolId}/${status}${query}`);
+  }
+
+  async updatePaymentStatus(
+    id: string,
+    schoolId: string,
+    status: PaymentStatus,
+    failureReason?: string
+  ): Promise<ApiResponse<Payment>> {
+    return apiClient.patch<Payment>(`/finance/payments/${id}/status`, { schoolId, status, failureReason });
+  }
+
+  async refundPayment(id: string, schoolId: string): Promise<ApiResponse<Payment>> {
+    return apiClient.post<Payment>(`/finance/payments/${id}/refund`, { schoolId });
   }
 
   // ==================== Invoices ====================
 
-  // Get student invoices
-  async getStudentInvoices(studentId: string): Promise<ApiResponse<Invoice[]>> {
-    return apiClient.get<Invoice[]>(`${this.baseURL}/students/${studentId}/invoices`);
+  async generateInvoice(request: GenerateInvoiceRequest): Promise<ApiResponse<Invoice>> {
+    return apiClient.post<Invoice>('/finance/invoices/generate', request);
   }
 
-  // Get invoice
-  async getInvoice(invoiceId: string): Promise<ApiResponse<Invoice>> {
-    return apiClient.get<Invoice>(`${this.baseURL}/invoices/${invoiceId}`);
+  async getInvoice(id: string): Promise<ApiResponse<Invoice>> {
+    return apiClient.get<Invoice>(`/finance/invoices/${id}`);
   }
 
-  // Create invoice
-  async createInvoice(request: Omit<Invoice, 'id' | 'status' | 'paidAmount' | 'createdAt' | 'updatedAt'>): Promise<
-    ApiResponse<Invoice>
-  > {
-    return apiClient.post<Invoice>(`${this.baseURL}/invoices`, request);
+  async listInvoices(schoolId: string, params?: { studentId?: string; status?: string }): Promise<ApiResponse<Invoice[]>> {
+    const query = new URLSearchParams({ schoolId, ...params } as Record<string, string>).toString();
+    return apiClient.get<Invoice[]>(`/finance/invoices?${query}`);
   }
 
-  // Send invoice
-  async sendInvoice(invoiceId: string, email: string): Promise<ApiResponse<{ message: string }>> {
-    return apiClient.post(`${this.baseURL}/invoices/${invoiceId}/send`, { email });
+  async updateInvoiceStatus(id: string, status: InvoiceStatus): Promise<ApiResponse<Invoice>> {
+    return apiClient.patch<Invoice>(`/finance/invoices/${id}/status`, { status });
   }
 
-  // Generate invoice PDF
-  async generateInvoicePDF(invoiceId: string): Promise<Blob> {
-    const response = await apiClient.get<any>(`${this.baseURL}/invoices/${invoiceId}/pdf`, {
-      responseType: 'blob',
-    });
-    return response.data as unknown as Blob;
+  async sendInvoice(id: string, recipientEmail: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.post(`/finance/invoices/${id}/send`, { recipientEmail });
   }
 
-  // ==================== Reports ====================
-
-  // Get financial report
-  async getFinancialReport(params?: {
-    startDate?: string;
-    endDate?: string;
-    classId?: string;
-  }): Promise<ApiResponse<FinancialReport>> {
-    const query = params
-      ? `?${Object.entries(params)
-          .map(([k, v]) => `${k}=${v}`)
-          .join('&')}`
-      : '';
-    return apiClient.get<FinancialReport>(`${this.baseURL}/reports/financial${query}`);
-  }
-
-  // Get payment summary
-  async getPaymentSummary(params?: {
-    startDate?: string;
-    endDate?: string;
-    method?: string;
-  }): Promise<
-    ApiResponse<{
-      totalPayments: number;
-      paymentsByMethod: Record<string, number>;
-      dailyPayments: Array<{ date: string; amount: number }>;
-    }>
-  > {
-    const query = params
-      ? `?${Object.entries(params)
-          .map(([k, v]) => `${k}=${v}`)
-          .join('&')}`
-      : '';
-    return apiClient.get<any>(`${this.baseURL}/reports/payments${query}`);
-  }
-
-  // Export financial data
-  async exportFinancialData(format: 'csv' | 'excel', params?: Record<string, any>): Promise<Blob> {
-    const query = params
-      ? `?${Object.entries(params)
-          .map(([k, v]) => `${k}=${v}`)
-          .join('&')}`
-      : '';
-    const response = await apiClient.get<any>(
-      `${this.baseURL}/reports/export?format=${format}${query ? `&${query}` : ''}`,
-      {
-        responseType: 'blob',
-      }
-    );
-    return response.data as unknown as Blob;
+  async getOverdueInvoices(schoolId: string): Promise<ApiResponse<Invoice[]>> {
+    return apiClient.get<Invoice[]>(`/finance/invoices/overdue/${schoolId}`);
   }
 }
 

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { financeService, FinancialReport } from '@/lib/services/finance.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,6 +14,17 @@ import {
   ChevronRight,
   Clock,
 } from 'lucide-react';
+
+// The finance service has no aggregate reporting endpoint yet — this is a
+// static preview until backend reporting is built.
+interface FinancialReport {
+  totalFees: number;
+  totalCollected: number;
+  pendingAmount: number;
+  overdueAmount: number;
+  collectionPercentage: number;
+  period: string;
+}
 
 const MOCK_REPORT: FinancialReport = {
   totalFees: 250000,
@@ -53,11 +63,8 @@ export default function FinancePage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    financeService
-      .getFinancialReport()
-      .then((res) => setReport(res.data))
-      .catch(() => setReport(MOCK_REPORT))
-      .finally(() => setIsLoading(false));
+    setReport(MOCK_REPORT);
+    setIsLoading(false);
   }, []);
 
   const fmt = (n: number) =>
@@ -138,9 +145,10 @@ export default function FinancePage() {
       )}
 
       {/* Quick Links */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { href: '/dashboard/finance/fee-structures', label: 'Fee Structures', desc: 'Manage fee plans by class' },
+          { href: '/dashboard/finance/fee-structures', label: 'Fees', desc: 'Manage the fee catalog' },
+          { href: '/dashboard/finance/student-fees', label: 'Student Fees', desc: 'Look up a student’s balance' },
           { href: '/dashboard/finance/payments', label: 'Payments', desc: 'Record & view all payments' },
           { href: '/dashboard/finance/invoices', label: 'Invoices', desc: 'Generate & send invoices' },
         ].map((item) => (

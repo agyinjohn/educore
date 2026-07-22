@@ -211,6 +211,22 @@ export class AcademicService {
     })
   }
 
+  async submitGrades(schoolId: string, term: string, academicYear: string) {
+    return await Grade.updateMany(
+      {
+        school_id: schoolId,
+        term,
+        academicYear,
+        status: GradeStatus.DRAFT,
+      },
+      {
+        $set: {
+          status: GradeStatus.SUBMITTED,
+        },
+      }
+    )
+  }
+
   async publishGrades(schoolId: string, term: string, academicYear: string) {
     return await Grade.updateMany(
       {

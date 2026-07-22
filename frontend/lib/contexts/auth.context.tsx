@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { authService, User, LoginRequest, RegisterRequest } from '@/lib/services/auth.service'
+import { apiClient } from '@/lib/api-client'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface AuthContextType {
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const payload = parseJwt(token)
         if (payload) {
+          apiClient.setAuthToken(token)
           setUser({ id: payload.sub, email: payload.email, role: payload.role, schoolId: payload.schoolId || undefined })
         }
       } catch {

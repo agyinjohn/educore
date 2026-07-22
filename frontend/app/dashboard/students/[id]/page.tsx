@@ -3,18 +3,19 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { studentService, Student, AttendanceStats } from '@/lib/services/student.service';
+import { studentService, Student } from '@/lib/services/student.service';
+import { academicService, AttendanceStats } from '@/lib/services/academic.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Pencil, User, MapPin, Phone, BookOpen, TrendingUp } from 'lucide-react';
-import { toast } from 'sonner';
+import { ArrowLeft, Pencil, User, Phone, Mail, TrendingUp } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-green-100 text-green-700',
   inactive: 'bg-gray-100 text-gray-700',
   graduated: 'bg-blue-100 text-blue-700',
   suspended: 'bg-red-100 text-red-700',
+  withdrawn: 'bg-orange-100 text-orange-700',
 };
 
 export default function StudentDetailPage() {
@@ -26,45 +27,17 @@ export default function StudentDetailPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [stuRes, attRes] = await Promise.all([
-          studentService.getStudent(id),
-          studentService.getAttendanceStats(id),
-        ]);
+        const stuRes = await studentService.getStudent(id);
         setStudent(stuRes.data);
-        setAttendanceStats(attRes.data);
+        // Attendance lives in the academic service, not the student service.
+        try {
+          const attRes = await academicService.getAttendanceStats(id);
+          setAttendanceStats(attRes.data);
+        } catch {
+          setAttendanceStats(null);
+        }
       } catch {
-        // Mock
-        setStudent({
-          id,
-          userId: 'u1',
-          enrollmentNumber: 'EN24001',
-          dateOfBirth: '2005-03-15',
-          gender: 'male',
-          phoneNumber: '+1-555-0100',
-          address: '123 Main St',
-          city: 'Springfield',
-          state: 'IL',
-          zipCode: '62701',
-          country: 'USA',
-          parentName: 'Jane Doe',
-          parentPhoneNumber: '+1-555-0200',
-          parentEmail: 'jane.doe@example.com',
-          enrollmentDate: '2024-01-10',
-          status: 'active',
-          currentClass: 'Class 10',
-          section: 'A',
-          rollNumber: 1,
-          admissionType: 'regular',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-        setAttendanceStats({
-          totalDays: 120,
-          presentDays: 112,
-          absentDays: 6,
-          lateDays: 2,
-          attendancePercentage: 93.3,
-        });
+        setStudent(null);
       } finally {
         setIsLoading(false);
       }
@@ -86,6 +59,8 @@ export default function StudentDetailPage() {
 
   if (!student) return <div className="text-center py-12 text-gray-500">Student not found</div>;
 
+  const guardian = student.guardians?.[0];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -98,7 +73,7 @@ export default function StudentDetailPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Student Profile</h1>
-            <p className="text-gray-500 text-sm">EN: {student.enrollmentNumber}</p>
+            <p className="text-gray-500 text-sm">Admission #: {student.admissionNumber || '—'}</p>
           </div>
         </div>
         <Link href={`/dashboard/students/${id}/edit`}>
@@ -119,9 +94,8 @@ export default function StudentDetailPage() {
               </div>
               <div>
                 <p className="font-semibold text-gray-900 text-lg">
-                  {student.parentName} {/* placeholder — real name would come from user join */}
+                  {student.firstName} {student.lastName}
                 </p>
-                <p className="text-sm text-gray-500">Roll #{student.rollNumber}</p>
               </div>
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[student.status]}`}>
                 {student.status}
@@ -129,9 +103,8 @@ export default function StudentDetailPage() {
             </div>
 
             <div className="mt-6 space-y-3 text-sm">
-              <InfoRow icon={BookOpen} label="Class" value={`${student.currentClass} - ${student.section}`} />
-              <InfoRow icon={MapPin} label="City" value={`${student.city}, ${student.state}`} />
-              <InfoRow icon={Phone} label="Phone" value={student.phoneNumber} />
+              {student.email && <InfoRow icon={Mail} label="Email" value={student.email} />}
+              {student.phone && <InfoRow icon={Phone} label="Phone" value={student.phone} />}
             </div>
           </CardContent>
         </Card>
@@ -144,25 +117,28 @@ export default function StudentDetailPage() {
               <CardTitle className="text-base">Personal Information</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <Detail label="Date of Birth" value={new Date(student.dateOfBirth).toLocaleDateString()} />
-              <Detail label="Gender" value={student.gender} capitalize />
-              <Detail label="Admission Type" value={student.admissionType} capitalize />
-              <Detail label="Enrollment Date" value={new Date(student.enrollmentDate).toLocaleDateString()} />
-              <Detail label="Address" value={`${student.address}, ${student.city}, ${student.state} ${student.zipCode}`} span />
+              <Detail label="Date of Birth" value={student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : '—'} />
+              <Detail label="Gender" value={student.gender || '—'} />
+              <Detail label="Admission Number" value={student.admissionNumber || '—'} />
+              <Detail label="Enrolment Date" value={student.enrolmentDate ? new Date(student.enrolmentDate).toLocaleDateString() : '—'} />
+              <Detail label="Class" value={student.class_id ? student.class_id : 'Not assigned'} span />
             </CardContent>
           </Card>
 
           {/* Parent */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Parent / Guardian</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <Detail label="Name" value={student.parentName} />
-              <Detail label="Email" value={student.parentEmail} />
-              <Detail label="Phone" value={student.parentPhoneNumber} />
-            </CardContent>
-          </Card>
+          {guardian && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Parent / Guardian</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <Detail label="Name" value={guardian.name} />
+                <Detail label="Relationship" value={guardian.relationship} />
+                <Detail label="Email" value={guardian.email || '—'} />
+                <Detail label="Phone" value={guardian.phone || '—'} />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Attendance */}
           {attendanceStats && (
@@ -211,11 +187,11 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
   );
 }
 
-function Detail({ label, value, capitalize, span }: { label: string; value: string; capitalize?: boolean; span?: boolean }) {
+function Detail({ label, value, span }: { label: string; value: string; span?: boolean }) {
   return (
     <div className={span ? 'sm:col-span-2' : ''}>
       <p className="text-gray-500 text-xs mb-0.5">{label}</p>
-      <p className={`text-gray-900 font-medium ${capitalize ? 'capitalize' : ''}`}>{value}</p>
+      <p className="text-gray-900 font-medium">{value}</p>
     </div>
   );
 }

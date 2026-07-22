@@ -108,6 +108,21 @@ export const getStudentGrades = async (req: Request, res: Response) => {
   }
 }
 
+export const submitGrades = async (req: Request, res: Response) => {
+  try {
+    const schoolId = req.user?.school_id
+    const { term, academicYear } = req.body
+    if (!schoolId || !term || !academicYear) {
+      return res.status(400).json({ success: false, message: 'school_id, term, and academicYear required' })
+    }
+    const result = await academicService.submitGrades(schoolId, term, academicYear)
+    res.status(200).json({ success: true, message: 'Grades submitted for approval', data: result })
+  } catch (error) {
+    console.error('submitGrades error:', error)
+    res.status(500).json({ success: false, message: 'Failed to submit grades' })
+  }
+}
+
 export const publishGrades = async (req: Request, res: Response) => {
   try {
     const schoolId = req.user?.school_id

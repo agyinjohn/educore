@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { studentService, CreateStudentRequest, Student } from '@/lib/services/student.service';
+import { academicService, Class } from '@/lib/services/academic.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -15,62 +16,79 @@ interface StudentFormProps {
   student?: Student;
 }
 
-const INITIAL: CreateStudentRequest = {
+const CURRENT_ACADEMIC_YEAR = (() => {
+  const now = new Date();
+  const startYear = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1; // Aug–Jul school year
+  return `${startYear}-${startYear + 1}`;
+})();
+
+interface FormState {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  dateOfBirth: string;
+  gender: 'M' | 'F' | 'Other';
+  admissionNumber: string;
+  class_id: string;
+  guardianName: string;
+  guardianRelationship: string;
+  guardianPhone: string;
+  guardianEmail: string;
+}
+
+const INITIAL: FormState = {
   firstName: '',
   lastName: '',
   email: '',
+  phone: '',
   dateOfBirth: '',
-  gender: 'male',
-  phoneNumber: '',
-  address: '',
-  city: '',
-  state: '',
-  zipCode: '',
-  country: '',
-  parentName: '',
-  parentPhoneNumber: '',
-  parentEmail: '',
-  enrollmentType: 'regular',
-  currentClass: '',
-  section: '',
-  admissionType: 'regular',
+  gender: 'M',
+  admissionNumber: '',
+  class_id: '',
+  guardianName: '',
+  guardianRelationship: '',
+  guardianPhone: '',
+  guardianEmail: '',
 };
 
 export default function StudentForm({ student }: StudentFormProps) {
   const router = useRouter();
   const isEdit = !!student;
+  const guardian = student?.guardians?.[0];
 
-  const [form, setForm] = useState<CreateStudentRequest>(() => ({
+  const [form, setForm] = useState<FormState>(() => ({
     ...INITIAL,
     ...(student
       ? {
-          dateOfBirth: student.dateOfBirth,
-          gender: student.gender,
-          phoneNumber: student.phoneNumber,
-          address: student.address,
-          city: student.city,
-          state: student.state,
-          zipCode: student.zipCode,
-          country: student.country,
-          parentName: student.parentName,
-          parentPhoneNumber: student.parentPhoneNumber,
-          parentEmail: student.parentEmail,
-          currentClass: student.currentClass,
-          section: student.section,
-          admissionType: student.admissionType,
-          enrollmentType: 'regular',
-          // split name fields not in Student type — leave blank
-          firstName: '',
-          lastName: '',
-          email: student.parentEmail,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email || '',
+          phone: student.phone || '',
+          dateOfBirth: student.dateOfBirth ? student.dateOfBirth.slice(0, 10) : '',
+          gender: student.gender || 'M',
+          admissionNumber: student.admissionNumber || '',
+          class_id: student.class_id || '',
+          guardianName: guardian?.name || '',
+          guardianRelationship: guardian?.relationship || '',
+          guardianPhone: guardian?.phone || '',
+          guardianEmail: guardian?.email || '',
         }
       : {}),
   }));
 
-  const [errors, setErrors] = useState<Partial<Record<keyof CreateStudentRequest, string>>>({});
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const set = (field: keyof CreateStudentRequest, value: string) => {
+  useEffect(() => {
+    academicService
+      .getClasses(CURRENT_ACADEMIC_YEAR)
+      .then((res) => setClasses(res.data))
+      .catch(() => setClasses([]));
+  }, []);
+
+  const set = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
@@ -79,9 +97,8 @@ export default function StudentForm({ student }: StudentFormProps) {
     const e: typeof errors = {};
     if (!form.firstName.trim()) e.firstName = 'Required';
     if (!form.lastName.trim()) e.lastName = 'Required';
-    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Valid email required';
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Enter a valid email';
     if (!form.dateOfBirth) e.dateOfBirth = 'Required';
-    if (!form.currentClass.trim()) e.currentClass = 'Required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -91,11 +108,42 @@ export default function StudentForm({ student }: StudentFormProps) {
     if (!validate()) return;
     setIsLoading(true);
     try {
+      const guardians = form.guardianName.trim()
+        ? [
+            {
+              name: form.guardianName,
+              relationship: form.guardianRelationship || 'Guardian',
+              phone: form.guardianPhone || undefined,
+              email: form.guardianEmail || undefined,
+            },
+          ]
+        : undefined;
+
       if (isEdit) {
-        await studentService.updateStudent(student!.id, form);
+        // class_id and status can only be changed via update, not create
+        await studentService.updateStudent(student!.id, {
+          firstName: form.firstName,
+          lastName: form.lastName,
+          class_id: form.class_id || undefined,
+        });
         toast.success('Student updated successfully');
       } else {
-        await studentService.createStudent(form);
+        const payload: CreateStudentRequest = {
+          firstName: form.firstName,
+          lastName: form.lastName,
+          email: form.email || undefined,
+          phone: form.phone || undefined,
+          dateOfBirth: form.dateOfBirth,
+          gender: form.gender,
+          admissionNumber: form.admissionNumber || undefined,
+          guardians,
+        };
+        const res = await studentService.createStudent(payload);
+        // Class assignment happens as a follow-up update — the create
+        // endpoint doesn't accept class_id.
+        if (form.class_id) {
+          await studentService.updateStudent(res.data.id, { class_id: form.class_id });
+        }
         toast.success('Student created successfully');
       }
       router.push('/dashboard/students');
@@ -107,11 +155,12 @@ export default function StudentForm({ student }: StudentFormProps) {
   };
 
   const field = (
-    id: keyof CreateStudentRequest,
+    id: keyof FormState,
     label: string,
     type = 'text',
     placeholder = '',
-    required = false
+    required = false,
+    disabled = false
   ) => (
     <div className="space-y-1.5">
       <Label htmlFor={id} className="text-sm font-medium">
@@ -121,9 +170,9 @@ export default function StudentForm({ student }: StudentFormProps) {
         id={id}
         type={type}
         placeholder={placeholder}
-        value={form[id] as string}
+        value={form[id]}
         onChange={(e) => set(id, e.target.value)}
-        disabled={isLoading}
+        disabled={isLoading || disabled}
         className={errors[id] ? 'border-red-500' : ''}
       />
       {errors[id] && <p className="text-xs text-red-500">{errors[id]}</p>}
@@ -157,61 +206,54 @@ export default function StudentForm({ student }: StudentFormProps) {
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {field('firstName', 'First Name', 'text', 'John', true)}
             {field('lastName', 'Last Name', 'text', 'Doe', true)}
-            {field('email', 'Email Address', 'email', 'student@example.com', true)}
-            {field('dateOfBirth', 'Date of Birth', 'date', '', true)}
+            {field('email', 'Email Address', 'email', 'student@example.com', false, isEdit)}
+            {field('dateOfBirth', 'Date of Birth', 'date', '', true, isEdit)}
             <div className="space-y-1.5">
               <Label htmlFor="gender" className="text-sm font-medium">Gender</Label>
               <select
                 id="gender"
                 value={form.gender}
                 onChange={(e) => set('gender', e.target.value)}
-                disabled={isLoading}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoading || isEdit}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
               >
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+                <option value="Other">Other</option>
               </select>
             </div>
-            {field('phoneNumber', 'Phone Number', 'tel', '+1 (555) 000-0000')}
+            {field('phone', 'Phone Number', 'tel', '+1 (555) 000-0000', false, isEdit)}
+            {field('admissionNumber', 'Admission Number', 'text', 'ADM-2025-001', false, isEdit)}
           </CardContent>
         </Card>
 
-        {/* Address */}
+        {/* Class Assignment (enrollment) */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Address</CardTitle>
+            <CardTitle className="text-base">Class Assignment</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">{field('address', 'Street Address', 'text', '123 Main St')}</div>
-            {field('city', 'City', 'text', 'Springfield')}
-            {field('state', 'State', 'text', 'IL')}
-            {field('zipCode', 'ZIP Code', 'text', '62701')}
-            {field('country', 'Country', 'text', 'USA')}
-          </CardContent>
-        </Card>
-
-        {/* Academic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Academic Information</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {field('currentClass', 'Class', 'text', 'Class 10', true)}
-            {field('section', 'Section', 'text', 'A')}
             <div className="space-y-1.5">
-              <Label htmlFor="admissionType" className="text-sm font-medium">Admission Type</Label>
+              <Label htmlFor="class_id" className="text-sm font-medium">Class</Label>
               <select
-                id="admissionType"
-                value={form.admissionType}
-                onChange={(e) => set('admissionType', e.target.value)}
+                id="class_id"
+                value={form.class_id}
+                onChange={(e) => set('class_id', e.target.value)}
                 disabled={isLoading}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="regular">Regular</option>
-                <option value="transfer">Transfer</option>
-                <option value="scholarship">Scholarship</option>
+                <option value="">Not assigned</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}{c.section ? ` - ${c.section}` : ''} ({c.academicYear})
+                  </option>
+                ))}
               </select>
+              {classes.length === 0 && (
+                <p className="text-xs text-gray-400">
+                  No classes found for {CURRENT_ACADEMIC_YEAR}. <Link href="/dashboard/classes/new" className="text-blue-600 hover:underline">Create one</Link> first.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -222,9 +264,15 @@ export default function StudentForm({ student }: StudentFormProps) {
             <CardTitle className="text-base">Parent / Guardian</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {field('parentName', 'Full Name', 'text', 'Jane Doe')}
-            {field('parentEmail', 'Email Address', 'email', 'parent@example.com')}
-            {field('parentPhoneNumber', 'Phone Number', 'tel', '+1 (555) 000-0001')}
+            {field('guardianName', 'Full Name', 'text', 'Jane Doe', false, isEdit)}
+            {field('guardianRelationship', 'Relationship', 'text', 'Mother', false, isEdit)}
+            {field('guardianEmail', 'Email Address', 'email', 'parent@example.com', false, isEdit)}
+            {field('guardianPhone', 'Phone Number', 'tel', '+1 (555) 000-0001', false, isEdit)}
+            {isEdit && (
+              <p className="md:col-span-2 text-xs text-gray-400">
+                Guardian details can only be set when the student is created.
+              </p>
+            )}
           </CardContent>
         </Card>
 
