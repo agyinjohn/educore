@@ -89,6 +89,7 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-educore-secret-key}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-${JWT_SECRET:-educore-secret-key}}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-${JWT_SECRET:-educore-secret-key}-refresh}
       JWT_EXPIRE: 7d
     depends_on:
       mongodb:

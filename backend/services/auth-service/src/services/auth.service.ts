@@ -247,3 +247,30 @@ export async function verifyAndEnableMfa(userId: string, secret: string, totpCod
 
   await User.updateOne({ _id: userId }, { mfaSecret: secret, mfaEnabled: true })
 }
+
+// ─── User Management (school-scoped) ───────────────────────────────────────────
+export async function listUsers(schoolId: string) {
+  return User.find({ schoolId, deletedAt: { $exists: false } })
+    .select('email role isActive mfaEnabled createdAt')
+    .sort({ createdAt: -1 })
+}
+
+export async function updateUserRoleOrStatus(
+  schoolId: string,
+  userId: string,
+  updates: { role?: Role; isActive?: boolean }
+) {
+  const user = await User.findOne({ _id: userId, schoolId, deletedAt: { $exists: false } })
+  if (!user) throw new Error('USER_NOT_FOUND')
+
+  if (updates.role !== undefined) user.role = updates.role
+  if (updates.isActive !== undefined) user.isActive = updates.isActive
+  await user.save()
+
+  if (updates.isActive === false) {
+    // Force sign-out everywhere when an account is deactivated
+    await RefreshToken.updateMany({ userId, revokedAt: { $exists: false } }, { revokedAt: new Date() })
+  }
+
+  return user
+}

@@ -11,6 +11,15 @@ export interface User {
   lastName?: string
 }
 
+export interface ManagedUser {
+  id: string
+  email: string
+  role: string
+  isActive: boolean
+  mfaEnabled: boolean
+  createdAt: string
+}
+
 export interface LoginRequest {
   email: string
   password: string
@@ -103,6 +112,17 @@ class AuthService {
 
   async setupMfa(): Promise<{ secret: string; otpAuthUrl: string }> {
     const response = await apiClient.post<{ secret: string; otpAuthUrl: string }>('/auth/mfa/setup', {})
+    return response.data
+  }
+
+  // ─── User Management (SCHOOL_OWNER / SCHOOL_ADMIN only) ────────────────────
+  async listUsers(): Promise<ManagedUser[]> {
+    const response = await apiClient.get<ManagedUser[]>('/auth/users')
+    return response.data
+  }
+
+  async updateUser(id: string, updates: { role?: string; isActive?: boolean }): Promise<ManagedUser> {
+    const response = await apiClient.patch<ManagedUser>(`/auth/users/${id}`, updates)
     return response.data
   }
 
