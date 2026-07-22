@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   Bell,
   MessageSquare,
+  Sparkles,
+  MessageCircleQuestion,
   Menu,
 } from 'lucide-react';
 
@@ -74,6 +76,18 @@ const navigation = [
     href: '/dashboard/messages',
     icon: MessageSquare,
     roles: [...STAFF_ROLES, 'PARENT'],
+  },
+  {
+    name: 'AI Insights',
+    href: '/dashboard/ai-insights',
+    icon: Sparkles,
+    roles: STAFF_ROLES,
+  },
+  {
+    name: 'Chatbot',
+    href: '/dashboard/chatbot',
+    icon: MessageCircleQuestion,
+    roles: STAFF_ROLES,
   },
   {
     name: 'Reports',

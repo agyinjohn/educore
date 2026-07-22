@@ -55,12 +55,14 @@ export interface GenerateReportRequest {
   filters?: Record<string, any>;
 }
 
+export type ScheduleFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'ANNUALLY';
+
 export interface ScheduledReport {
   id: string;
   templateId: string;
   name: string;
   schedule: {
-    frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'ANNUALLY';
+    frequency: ScheduleFrequency;
     time: string;
     timezone: string;
   };
@@ -68,6 +70,14 @@ export interface ScheduledReport {
   recipients: Array<{ email: string; type: 'TO' | 'CC' | 'BCC' }>;
   isActive: boolean;
   nextGenerationAt: string;
+}
+
+export interface CreateScheduledReportRequest {
+  templateId: string;
+  name: string;
+  schedule: { frequency: ScheduleFrequency; time: string; timezone?: string };
+  format: ReportFormat;
+  recipients: Array<{ email: string; type?: 'TO' | 'CC' | 'BCC' }>;
 }
 
 export class ReportService {
@@ -113,6 +123,25 @@ export class ReportService {
 
   async getScheduledReports(): Promise<ApiResponse<ScheduledReport[]>> {
     return apiClient.get<ScheduledReport[]>('/reports/scheduled');
+  }
+
+  // The backend model requires nextGenerationAt but nothing computes it —
+  // derive a first run time (tomorrow at the chosen time) rather than
+  // asking the user to pick a raw timestamp.
+  async createScheduledReport(request: CreateScheduledReportRequest): Promise<ApiResponse<ScheduledReport>> {
+    const [hours, minutes] = request.schedule.time.split(':').map(Number);
+    const nextGenerationAt = new Date();
+    nextGenerationAt.setDate(nextGenerationAt.getDate() + 1);
+    nextGenerationAt.setHours(hours || 0, minutes || 0, 0, 0);
+    return apiClient.post<ScheduledReport>('/reports/scheduled', {
+      ...request,
+      schedule: { timezone: 'UTC', ...request.schedule },
+      nextGenerationAt: nextGenerationAt.toISOString(),
+    });
+  }
+
+  async deleteScheduledReport(scheduleId: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/reports/scheduled/${scheduleId}`);
   }
 
   // ==================== Stats ====================
