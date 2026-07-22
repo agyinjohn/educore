@@ -83,14 +83,18 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
 
         {/* User Menu */}
         <DropdownMenu>
+          {/* DropdownMenuTrigger already renders a <button> — wrapping
+              another <Button> inside it produced invalid nested <button>
+              markup and a hydration warning, so this is a plain styled
+              div instead. */}
           <DropdownMenuTrigger>
-            <Button variant="ghost" className="rounded-lg p-0 h-auto">
+            <div className="rounded-lg p-0 h-auto cursor-pointer hover:opacity-80 transition-opacity">
               <Avatar className="h-9 w-9">
                 <AvatarFallback className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-            </Button>
+            </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
