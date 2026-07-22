@@ -174,6 +174,14 @@ export class AcademicService {
     return apiClient.post<Class>('/academic/classes', request);
   }
 
+  async updateClass(id: string, request: { name?: string; teacher_id?: string; capacity?: number }): Promise<ApiResponse<Class>> {
+    return apiClient.put<Class>(`/academic/classes/${id}`, request);
+  }
+
+  async deleteClass(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/academic/classes/${id}`);
+  }
+
   // ==================== Attendance ====================
 
   async markAttendance(request: MarkAttendanceRequest): Promise<ApiResponse<Attendance>> {

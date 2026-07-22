@@ -37,8 +37,7 @@ export default function MessagesPage() {
       setThreads(res.data);
       if (isTeacher) {
         const stuRes = await studentService.getStudents({ limit: 100 });
-        const body = stuRes.data as any;
-        setStudents(body.data ?? body.students ?? []);
+        setStudents(stuRes.data);
       }
     } catch {
       toast.error('Could not reach the messaging service');

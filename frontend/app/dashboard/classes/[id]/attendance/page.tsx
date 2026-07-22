@@ -36,8 +36,7 @@ export default function ClassAttendancePage() {
     setIsLoading(true);
     try {
       const rosterRes = await studentService.getStudents({ class_id: id, limit: 100 });
-      const body = rosterRes.data as any;
-      const students: Student[] = body.data ?? body.students ?? [];
+      const students: Student[] = rosterRes.data;
       setRoster(students);
 
       const attRes = await academicService.getClassAttendance(id, date);

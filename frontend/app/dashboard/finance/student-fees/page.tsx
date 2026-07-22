@@ -24,8 +24,7 @@ export default function StudentFeesPage() {
 
   useEffect(() => {
     studentService.getStudents({ limit: 100 }).then((res) => {
-      const body = res.data as any;
-      setStudents(body.data ?? body.students ?? []);
+      setStudents(res.data);
     }).catch(() => setStudents([])).finally(() => setIsLoadingStudents(false));
   }, []);
 

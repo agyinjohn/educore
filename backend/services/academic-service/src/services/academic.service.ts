@@ -31,6 +31,22 @@ export class AcademicService {
     })
   }
 
+  async updateClass(schoolId: string, classId: string, data: Partial<IClass>) {
+    return await Class.findOneAndUpdate(
+      { _id: classId, school_id: schoolId, deletedAt: null },
+      { $set: data },
+      { new: true }
+    )
+  }
+
+  async deleteClass(schoolId: string, classId: string) {
+    return await Class.findOneAndUpdate(
+      { _id: classId, school_id: schoolId, deletedAt: null },
+      { $set: { deletedAt: new Date() } },
+      { new: true }
+    )
+  }
+
   // Timetable
   async createTimetableSlot(schoolId: string, data: Partial<ITimetableSlot>) {
     // Check for teacher/room conflicts

@@ -63,12 +63,11 @@ export interface UpdateStudentRequest extends Partial<CreateStudentRequest> {
   status?: StudentStatus;
 }
 
-export interface StudentListResponse {
-  students: Student[];
-  total: number;
-  page: number;
-  limit: number;
-}
+// The backend returns { success, data: Student[], cursor, hasMore } — after
+// apiClient's envelope-unwrapping interceptor, res.data IS the Student[]
+// with cursor/hasMore merged on as extra properties (no exact total; the
+// list is cursor-paginated).
+export type StudentPage = Student[] & { cursor: string | null; hasMore: boolean };
 
 export interface StudentListParams {
   limit?: number;
@@ -83,7 +82,7 @@ export interface StudentListParams {
 
 export class StudentService {
   // Get all students
-  async getStudents(params?: StudentListParams): Promise<ApiResponse<StudentListResponse>> {
+  async getStudents(params?: StudentListParams): Promise<ApiResponse<StudentPage>> {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -93,7 +92,7 @@ export class StudentService {
       });
     }
     const query = queryParams.toString();
-    return apiClient.get<StudentListResponse>(`/students${query ? `?${query}` : ''}`);
+    return apiClient.get<StudentPage>(`/students${query ? `?${query}` : ''}`);
   }
 
   // Get student by ID
@@ -116,8 +115,8 @@ export class StudentService {
     return apiClient.delete(`/students/${id}`);
   }
 
-  // Bulk import students
-  async bulkImportStudents(students: CreateStudentRequest[]): Promise<ApiResponse<{ imported: number; errors: any[] }>> {
+  // Bulk import students — backend returns { success, count, data: Student[] }
+  async bulkImportStudents(students: CreateStudentRequest[]): Promise<ApiResponse<Student[] & { count: number }>> {
     return apiClient.post(`/students/import/bulk`, { students });
   }
 }

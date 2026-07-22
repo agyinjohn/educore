@@ -33,8 +33,7 @@ export default function ClassDetailPage() {
       setCls(found);
 
       const rosterRes = await studentService.getStudents({ class_id: id, limit: 100 });
-      const body = rosterRes.data as any;
-      setRoster(body.data ?? body.students ?? []);
+      setRoster(rosterRes.data);
     } catch {
       toast.error('Could not load class details');
     } finally {

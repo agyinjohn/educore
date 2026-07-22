@@ -66,7 +66,7 @@ export default function ImportStudentsPage() {
         admissionNumber: r.admissionNumber || undefined,
       }));
       const res = await studentService.bulkImportStudents(students);
-      toast.success(`Imported ${res.data.imported ?? rows.length} students`);
+      toast.success(`Imported ${res.data.count ?? rows.length} students`);
       router.push('/dashboard/students');
     } catch {
       toast.error('Import failed');

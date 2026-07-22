@@ -41,15 +41,14 @@ export default function StudentsPage() {
   const fetchStudents = useCallback(async (cursor: string | null) => {
     setIsLoading(true);
     try {
-      const res: any = await studentService.getStudents({
+      const res = await studentService.getStudents({
         limit,
         cursor: cursor || undefined,
         status: statusFilter || undefined,
       });
-      const body = res.data as any;
-      setStudents(body.data ?? body.students ?? []);
-      setNextCursor(body.cursor ?? null);
-      setHasMore(!!body.hasMore);
+      setStudents(res.data);
+      setNextCursor(res.data.cursor ?? null);
+      setHasMore(!!res.data.hasMore);
     } catch {
       setStudents([]);
       setNextCursor(null);
