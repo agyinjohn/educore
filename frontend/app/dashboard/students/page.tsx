@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Plus,
+  Upload,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -40,15 +41,14 @@ export default function StudentsPage() {
   const fetchStudents = useCallback(async (cursor: string | null) => {
     setIsLoading(true);
     try {
-      const res: any = await studentService.getStudents({
+      const res = await studentService.getStudents({
         limit,
         cursor: cursor || undefined,
         status: statusFilter || undefined,
       });
-      const body = res.data as any;
-      setStudents(body.data ?? body.students ?? []);
-      setNextCursor(body.cursor ?? null);
-      setHasMore(!!body.hasMore);
+      setStudents(res.data);
+      setNextCursor(res.data.cursor ?? null);
+      setHasMore(!!res.data.hasMore);
     } catch {
       setStudents([]);
       setNextCursor(null);
@@ -100,12 +100,20 @@ export default function StudentsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Students</h1>
           <p className="text-gray-600 mt-1">Manage student enrollments and profiles</p>
         </div>
-        <Link href="/dashboard/students/new">
-          <Button className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add Student
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/students/import">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Upload className="h-4 w-4" />
+              Import CSV
+            </Button>
+          </Link>
+          <Link href="/dashboard/students/new">
+            <Button className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Student
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

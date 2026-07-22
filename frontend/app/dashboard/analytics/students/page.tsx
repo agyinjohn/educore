@@ -23,9 +23,7 @@ export default function StudentAnalyticsPage() {
         const results = await Promise.all(
           STATUSES.map((status) =>
             studentService.getStudents({ limit: 100, status }).then((res) => {
-              const body = res.data as any;
-              const list = body.data ?? body.students ?? [];
-              return { count: list.length, hasMore: !!body.hasMore };
+              return { count: res.data.length, hasMore: !!res.data.hasMore };
             })
           )
         );

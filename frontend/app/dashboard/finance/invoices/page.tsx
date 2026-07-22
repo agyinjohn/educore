@@ -51,8 +51,7 @@ export default function InvoicesPage() {
       ]);
       setInvoices(invRes.data);
       setFees(feeRes.data);
-      const body = stuRes.data as any;
-      setStudents(body.data ?? body.students ?? []);
+      setStudents(stuRes.data);
     } catch {
       toast.error('Could not reach the finance service');
     } finally {

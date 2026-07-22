@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/lib/components/protected-route';
 import TopNav from '@/components/layout/TopNav';
 import Sidebar from '@/components/layout/Sidebar';
 import MobileNav from '@/components/layout/MobileNav';
+import Breadcrumb from '@/components/layout/Breadcrumb';
 
 export default function DashboardLayout({
   children,
@@ -30,6 +31,7 @@ export default function DashboardLayout({
           {/* Page Content */}
           <main className="flex-1 overflow-y-auto">
             <div className="p-6">
+              <Breadcrumb />
               {children}
             </div>
           </main>

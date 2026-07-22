@@ -26,6 +26,8 @@ export const config = {
     notification: requireEnv('NOTIFICATION_SERVICE_URL'),
     analytics: requireEnv('ANALYTICS_SERVICE_URL'),
     report: requireEnv('REPORT_SERVICE_URL'),
+    ai: requireEnv('AI_SERVICE_URL'),
+    chatbot: requireEnv('CHATBOT_SERVICE_URL'),
   },
 
   cors: {

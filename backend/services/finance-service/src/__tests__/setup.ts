@@ -1,8 +1,10 @@
 import dotenv from 'dotenv'
 import path from 'path'
 
-// Load test environment
-dotenv.config({ path: path.resolve(__dirname, '../../../.env.test') })
+// Load test environment — resolves to backend/.env.test (this was pointing
+// one directory too shallow, at backend/services/.env.test, which doesn't
+// exist, so it silently loaded nothing).
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env.test') })
 
 // Suppress console output during tests
 global.console = {

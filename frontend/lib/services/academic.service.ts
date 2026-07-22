@@ -99,20 +99,32 @@ export interface Assessment {
   id: string;
   school_id: string;
   class_id: string;
+  subject_id: string;
   name: string;
-  type: string;
-  totalMarks: number;
-  weight: number;
+  type: AssessmentType;
+  maxScore: number;
+  weight?: number;
+  description?: string;
+  date: string;
   term: string;
+  academicYear: string;
+  dueDate?: string;
 }
+
+export type AssessmentType = 'quiz' | 'test' | 'exam' | 'project' | 'assignment' | 'classwork';
 
 export interface CreateAssessmentRequest {
   class_id: string;
+  subject_id: string;
   name: string;
-  type: string;
-  totalMarks: number;
-  weight: number;
+  type: AssessmentType;
+  maxScore: number;
+  weight?: number;
+  description?: string;
+  date: string;
   term: string;
+  academicYear: string;
+  dueDate?: string;
 }
 
 export interface TimetableSlot {
@@ -160,6 +172,14 @@ export class AcademicService {
 
   async createClass(request: CreateClassRequest): Promise<ApiResponse<Class>> {
     return apiClient.post<Class>('/academic/classes', request);
+  }
+
+  async updateClass(id: string, request: { name?: string; teacher_id?: string; capacity?: number }): Promise<ApiResponse<Class>> {
+    return apiClient.put<Class>(`/academic/classes/${id}`, request);
+  }
+
+  async deleteClass(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/academic/classes/${id}`);
   }
 
   // ==================== Attendance ====================

@@ -11,6 +11,15 @@ export interface User {
   lastName?: string
 }
 
+export interface ManagedUser {
+  id: string
+  email: string
+  role: string
+  isActive: boolean
+  mfaEnabled: boolean
+  createdAt: string
+}
+
 export interface LoginRequest {
   email: string
   password: string
@@ -56,35 +65,29 @@ const TOKEN_EXPIRY_KEY = 'token_expiry'
 const ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000
 
 class AuthService {
+  // apiClient's response interceptor already unwraps the backend's
+  // {success, data} envelope, so response.data below is the payload itself.
   async login(request: LoginRequest): Promise<LoginResponse> {
-    const response = await apiClient.post<{ success: boolean; data: LoginResponse }>(
+    const response = await apiClient.post<LoginResponse>(
       '/auth/login',
       { email: request.email, password: request.password }
     )
-    const { data } = response.data
-    this.setToken(data.accessToken)
-    return data
+    this.setToken(response.data.accessToken)
+    return response.data
   }
 
   // Register just creates the account — does NOT auto-login
   async register(request: RegisterRequest): Promise<RegisterResponse> {
-    const response = await apiClient.post<{ success: boolean; data: RegisterResponse }>(
-      '/auth/register',
-      request
-    )
-    return response.data.data
+    const response = await apiClient.post<RegisterResponse>('/auth/register', request)
+    return response.data
   }
 
   // Refresh token lives in an httpOnly cookie (set by the backend on login) —
   // withCredentials on the axios instance sends it automatically.
   async refreshToken(): Promise<string> {
-    const response = await apiClient.post<{ success: boolean; data: { accessToken: string } }>(
-      '/auth/refresh',
-      {}
-    )
-    const { accessToken } = response.data.data
-    this.setToken(accessToken)
-    return accessToken
+    const response = await apiClient.post<{ accessToken: string }>('/auth/refresh', {})
+    this.setToken(response.data.accessToken)
+    return response.data.accessToken
   }
 
   async logout(): Promise<void> {
@@ -105,6 +108,26 @@ class AuthService {
 
   async changePassword(request: ChangePasswordRequest): Promise<void> {
     await apiClient.post('/auth/change-password', request)
+  }
+
+  async setupMfa(): Promise<{ secret: string; otpAuthUrl: string }> {
+    const response = await apiClient.post<{ secret: string; otpAuthUrl: string }>('/auth/mfa/setup', {})
+    return response.data
+  }
+
+  // ─── User Management (SCHOOL_OWNER / SCHOOL_ADMIN only) ────────────────────
+  async listUsers(): Promise<ManagedUser[]> {
+    const response = await apiClient.get<ManagedUser[]>('/auth/users')
+    return response.data
+  }
+
+  async updateUser(id: string, updates: { role?: string; isActive?: boolean }): Promise<ManagedUser> {
+    const response = await apiClient.patch<ManagedUser>(`/auth/users/${id}`, updates)
+    return response.data
+  }
+
+  async verifyMfa(secret: string, totpCode: string): Promise<void> {
+    await apiClient.post('/auth/mfa/verify', { secret, totpCode })
   }
 
   // ─── Token Management ───────────────────────────────────────────────────────

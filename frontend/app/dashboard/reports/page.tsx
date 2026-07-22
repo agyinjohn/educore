@@ -1,17 +1,18 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { reportService, ReportTemplate, GeneratedReport, ReportType, ReportFormat } from '@/lib/services/report.service';
+import { reportService, ReportTemplate, GeneratedReport, ReportType, ReportFormat, ScheduledReport, ScheduleFrequency } from '@/lib/services/report.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, X, Loader2, FileText, Trash2, Play, Download } from 'lucide-react';
+import { Plus, X, Loader2, FileText, Trash2, Play, Download, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 const REPORT_TYPES: ReportType[] = ['ACADEMIC', 'FINANCIAL', 'ATTENDANCE', 'CUSTOM'];
 const FORMATS: ReportFormat[] = ['PDF', 'EXCEL', 'JSON', 'CSV'];
+const FREQUENCIES: ScheduleFrequency[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUALLY'];
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-gray-100 text-gray-700',
@@ -31,19 +32,28 @@ export default function ReportsPage() {
   const [templateForm, setTemplateForm] = useState({ name: '', description: '', reportType: 'CUSTOM' as ReportType });
   const [formatByTemplate, setFormatByTemplate] = useState<Record<string, ReportFormat>>({});
 
+  const [scheduled, setScheduled] = useState<ScheduledReport[]>([]);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({
+    templateId: '', name: '', frequency: 'WEEKLY' as ScheduleFrequency, time: '08:00', format: 'PDF' as ReportFormat, recipientEmail: '',
+  });
+
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [tRes, gRes] = await Promise.all([
+      const [tRes, gRes, sRes] = await Promise.all([
         reportService.getTemplates(),
         reportService.getGeneratedReports({ limit: 20 }),
+        reportService.getScheduledReports(),
       ]);
       setTemplates(tRes.data);
       setGenerated(gRes.data);
+      setScheduled(sRes.data);
     } catch {
       toast.error('Could not reach the report service');
       setTemplates([]);
       setGenerated([]);
+      setScheduled([]);
     } finally {
       setIsLoading(false);
     }
@@ -100,6 +110,43 @@ export default function ReportsPage() {
       load();
     } catch {
       toast.error('Failed to delete report');
+    }
+  };
+
+  const handleCreateSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!scheduleForm.templateId || !scheduleForm.name.trim() || !scheduleForm.recipientEmail.trim()) {
+      toast.error('Template, name, and at least one recipient are required');
+      return;
+    }
+    setSaving(true);
+    try {
+      await reportService.createScheduledReport({
+        templateId: scheduleForm.templateId,
+        name: scheduleForm.name,
+        schedule: { frequency: scheduleForm.frequency, time: scheduleForm.time },
+        format: scheduleForm.format,
+        recipients: [{ email: scheduleForm.recipientEmail, type: 'TO' }],
+      });
+      toast.success('Report scheduled');
+      setShowScheduleForm(false);
+      setScheduleForm({ templateId: '', name: '', frequency: 'WEEKLY', time: '08:00', format: 'PDF', recipientEmail: '' });
+      load();
+    } catch {
+      toast.error('Failed to schedule report');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteSchedule = async (id: string) => {
+    if (!confirm('Delete this schedule?')) return;
+    try {
+      await reportService.deleteScheduledReport(id);
+      toast.success('Schedule deleted');
+      load();
+    } catch {
+      toast.error('Failed to delete schedule');
     }
   };
 
@@ -243,6 +290,101 @@ export default function ReportsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Scheduled Reports
+            </CardTitle>
+            <Button size="sm" variant="outline" onClick={() => setShowScheduleForm(true)} className="flex items-center gap-2">
+              <Plus className="h-3.5 w-3.5" />
+              New Schedule
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {showScheduleForm && (
+            <form onSubmit={handleCreateSchedule} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4 border border-blue-200 rounded-lg">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Template <span className="text-red-500">*</span></Label>
+                <select
+                  value={scheduleForm.templateId}
+                  onChange={(e) => setScheduleForm((p) => ({ ...p, templateId: e.target.value }))}
+                  disabled={saving}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select template</option>
+                  {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Name <span className="text-red-500">*</span></Label>
+                <Input value={scheduleForm.name} onChange={(e) => setScheduleForm((p) => ({ ...p, name: e.target.value }))} disabled={saving} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Recipient Email <span className="text-red-500">*</span></Label>
+                <Input type="email" value={scheduleForm.recipientEmail} onChange={(e) => setScheduleForm((p) => ({ ...p, recipientEmail: e.target.value }))} disabled={saving} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Frequency</Label>
+                <select
+                  value={scheduleForm.frequency}
+                  onChange={(e) => setScheduleForm((p) => ({ ...p, frequency: e.target.value as ScheduleFrequency }))}
+                  disabled={saving}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Time (UTC)</Label>
+                <Input type="time" value={scheduleForm.time} onChange={(e) => setScheduleForm((p) => ({ ...p, time: e.target.value }))} disabled={saving} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Format</Label>
+                <select
+                  value={scheduleForm.format}
+                  onChange={(e) => setScheduleForm((p) => ({ ...p, format: e.target.value as ReportFormat }))}
+                  disabled={saving}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+              <div className="sm:col-span-3 flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => setShowScheduleForm(false)} disabled={saving}>Cancel</Button>
+                <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create Schedule'}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {isLoading ? (
+            <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+          ) : scheduled.length === 0 ? (
+            <p className="text-sm text-gray-400 py-4 text-center">No scheduled reports yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {scheduled.map((s) => (
+                <div key={s.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">{s.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {s.schedule.frequency} at {s.schedule.time} · next run {new Date(s.nextGenerationAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <button onClick={() => handleDeleteSchedule(s.id)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-red-600">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

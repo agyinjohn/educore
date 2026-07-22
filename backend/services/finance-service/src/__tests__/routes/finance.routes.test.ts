@@ -9,6 +9,21 @@ jest.mock('../../services/fee.service')
 jest.mock('../../services/payment.service')
 jest.mock('../../services/invoice.service')
 
+// Auth is a cross-cutting concern exercised by its own unit tests
+// (see authenticate.test.ts) — these route tests stub it out so they can
+// keep asserting on route/controller behavior against a fixed schoolId,
+// same as every fixture in this file already uses ('school-123').
+jest.mock('../../middleware/authenticate', () => ({
+  authenticate: (req: any, _res: any, next: any) => {
+    req.user = { sub: 'test-user', email: 'test@school.com', role: 'SCHOOL_ADMIN', schoolId: 'school-123' }
+    next()
+  },
+  tenantIsolation: (req: any, _res: any, next: any) => {
+    if (req.body && req.body.schoolId === undefined) req.body.schoolId = 'school-123'
+    next()
+  },
+}))
+
 describe('Finance Service Routes', () => {
   let app: express.Application
 

@@ -83,9 +83,27 @@ export class ApiClient {
       }
     );
 
-    // Response interceptor - Handle errors
+    // Response interceptor - unwrap the {success, data, ...rest} envelope
+    // every backend service uses (except chatbot-service, which returns the
+    // raw object with no envelope — left untouched since it has no
+    // `success`/`data` keys to match). Sibling fields some endpoints send
+    // alongside `data` (cursor, hasMore, count, message, ...) are preserved
+    // by merging them onto the unwrapped value so callers can still read
+    // e.g. res.data.cursor after res.data is now the array/object itself.
     this.instance.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        const body = response.data;
+        if (body && typeof body === 'object' && 'success' in body && 'data' in body) {
+          const { data, ...rest } = body as { data: unknown; [key: string]: unknown };
+          delete rest.success;
+          if (data !== null && typeof data === 'object') {
+            response.data = Object.assign(data as object, rest);
+          } else {
+            response.data = data;
+          }
+        }
+        return response;
+      },
       async (error) => {
         const config = error.config as RequestConfig;
 

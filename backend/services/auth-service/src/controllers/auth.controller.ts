@@ -147,3 +147,35 @@ export async function verifyMfa(req: Request, res: Response): Promise<void> {
     handleError(res, err)
   }
 }
+
+// ─── User Management (requires authenticate + requireRole middleware) ──────────
+export async function listUsers(req: Request, res: Response): Promise<void> {
+  try {
+    const schoolId = (req as any).user?.schoolId
+    if (!schoolId) {
+      res.status(400).json({ success: false, message: 'No school associated with this account' })
+      return
+    }
+    const users = await authService.listUsers(schoolId)
+    res.json({ success: true, data: users })
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+export async function updateUser(req: Request, res: Response): Promise<void> {
+  try {
+    const schoolId = (req as any).user?.schoolId
+    if (!schoolId) {
+      res.status(400).json({ success: false, message: 'No school associated with this account' })
+      return
+    }
+    const user = await authService.updateUserRoleOrStatus(schoolId, req.params.id, {
+      role: req.body.role,
+      isActive: req.body.isActive,
+    })
+    res.json({ success: true, data: user })
+  } catch (err) {
+    handleError(res, err)
+  }
+}

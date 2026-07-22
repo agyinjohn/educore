@@ -1,10 +1,15 @@
 import { Router } from 'express';
 import { ChatbotController } from '../controllers/chatbot.controller';
+import { resolveTenant } from '../middleware/resolveTenant';
 
 const router = Router();
 
-// Health check
+// Health check (no tenant header required)
 router.get('/health', ChatbotController.health);
+
+// Everything below trusts the gateway to have authenticated the caller and
+// injected x-school-id.
+router.use(resolveTenant);
 
 // Conversation endpoints
 router.post('/conversations', ChatbotController.startConversation);

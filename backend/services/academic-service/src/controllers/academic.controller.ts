@@ -31,6 +31,40 @@ export const listClasses = async (req: Request, res: Response) => {
   }
 }
 
+export const updateClass = async (req: Request, res: Response) => {
+  try {
+    const schoolId = req.user?.school_id
+    if (!schoolId) {
+      return res.status(400).json({ success: false, message: 'school_id required' })
+    }
+    const cls = await academicService.updateClass(schoolId, req.params.id, req.body)
+    if (!cls) {
+      return res.status(404).json({ success: false, message: 'Class not found' })
+    }
+    res.status(200).json({ success: true, data: cls })
+  } catch (error) {
+    console.error('updateClass error:', error)
+    res.status(500).json({ success: false, message: 'Failed to update class' })
+  }
+}
+
+export const deleteClass = async (req: Request, res: Response) => {
+  try {
+    const schoolId = req.user?.school_id
+    if (!schoolId) {
+      return res.status(400).json({ success: false, message: 'school_id required' })
+    }
+    const cls = await academicService.deleteClass(schoolId, req.params.id)
+    if (!cls) {
+      return res.status(404).json({ success: false, message: 'Class not found' })
+    }
+    res.status(200).json({ success: true, message: 'Class deleted' })
+  } catch (error) {
+    console.error('deleteClass error:', error)
+    res.status(500).json({ success: false, message: 'Failed to delete class' })
+  }
+}
+
 // Attendance
 export const markAttendance = async (req: Request, res: Response) => {
   try {

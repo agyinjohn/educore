@@ -1,10 +1,15 @@
 import { Router } from 'express';
 import AIController from '../controllers/ai.controller';
+import { resolveTenant } from '../middleware/resolveTenant';
 
 const router = Router();
 
-// Health check
+// Health check (no tenant header required)
 router.get('/health', (req, res) => AIController.health(req, res));
+
+// Everything below trusts the gateway to have authenticated the caller and
+// injected x-school-id.
+router.use(resolveTenant);
 
 // Prediction Models
 router.get('/models', (req, res) => AIController.getModels(req, res));

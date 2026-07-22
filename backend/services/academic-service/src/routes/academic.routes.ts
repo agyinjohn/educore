@@ -4,6 +4,7 @@ import { authenticate, authorize, tenantIsolation } from '../middleware/authenti
 import { validate } from '../middleware/validate'
 import {
   createClassSchema,
+  updateClassSchema,
   markAttendanceSchema,
   recordGradeSchema,
   submitGradesSchema,
@@ -25,6 +26,19 @@ router.post(
 )
 
 router.get('/classes', controller.listClasses)
+
+router.put(
+  '/classes/:id',
+  authorize(['SCHOOL_ADMIN', 'ACADEMIC_HEAD']),
+  validate(updateClassSchema),
+  controller.updateClass
+)
+
+router.delete(
+  '/classes/:id',
+  authorize(['SCHOOL_ADMIN']),
+  controller.deleteClass
+)
 
 // Attendance
 router.post(

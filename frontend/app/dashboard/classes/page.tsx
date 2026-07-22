@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { academicService, Class } from '@/lib/services/academic.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Eye, Users2, GraduationCap } from 'lucide-react';
+import { Plus, Eye, Users2, GraduationCap, Pencil, Trash2, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const CURRENT_ACADEMIC_YEAR = (() => {
@@ -20,6 +21,9 @@ export default function ClassesPage() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [academicYear, setAcademicYear] = useState(CURRENT_ACADEMIC_YEAR);
+  const [editing, setEditing] = useState<Class | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', teacher_id: '', capacity: '' });
+  const [saving, setSaving] = useState(false);
 
   const fetchClasses = useCallback(async () => {
     setIsLoading(true);
@@ -37,6 +41,42 @@ export default function ClassesPage() {
   useEffect(() => {
     fetchClasses();
   }, [fetchClasses]);
+
+  const openEdit = (cls: Class) => {
+    setEditing(cls);
+    setEditForm({ name: cls.name, teacher_id: cls.teacher_id || '', capacity: cls.capacity?.toString() || '' });
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editing) return;
+    setSaving(true);
+    try {
+      await academicService.updateClass(editing.id, {
+        name: editForm.name,
+        teacher_id: editForm.teacher_id || undefined,
+        capacity: editForm.capacity ? Number(editForm.capacity) : undefined,
+      });
+      toast.success('Class updated');
+      setEditing(null);
+      fetchClasses();
+    } catch {
+      toast.error('Failed to update class');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (cls: Class) => {
+    if (!confirm(`Delete ${cls.name}? This cannot be undone.`)) return;
+    try {
+      await academicService.deleteClass(cls.id);
+      toast.success('Class deleted');
+      fetchClasses();
+    } catch {
+      toast.error('Failed to delete class');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -64,6 +104,45 @@ export default function ClassesPage() {
         </CardContent>
       </Card>
 
+      {editing && (
+        <Card className="border-blue-200">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Edit {editing.name}</CardTitle>
+              <button onClick={() => setEditing(null)} className="p-1 hover:bg-gray-100 rounded-lg">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSaveEdit} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Name</Label>
+                <Input value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} disabled={saving} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Teacher ID</Label>
+                <Input value={editForm.teacher_id} onChange={(e) => setEditForm((p) => ({ ...p, teacher_id: e.target.value }))} disabled={saving} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Capacity</Label>
+                <Input type="number" min={0} value={editForm.capacity} onChange={(e) => setEditForm((p) => ({ ...p, capacity: e.target.value }))} disabled={saving} />
+              </div>
+              <p className="sm:col-span-3 text-xs text-gray-400">
+                Section, grade level, and academic year can&apos;t be changed after creation — the backend only
+                supports updating name, teacher, and capacity.
+              </p>
+              <div className="sm:col-span-3 flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => setEditing(null)} disabled={saving}>Cancel</Button>
+                <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -80,9 +159,19 @@ export default function ClassesPage() {
           {classes.map((cls) => (
             <Card key={cls.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base leading-tight">
-                  {cls.name}{cls.section ? ` - ${cls.section}` : ''}
-                </CardTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-base leading-tight">
+                    {cls.name}{cls.section ? ` - ${cls.section}` : ''}
+                  </CardTitle>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button onClick={() => openEdit(cls)} className="p-1 hover:bg-gray-100 rounded text-gray-500 hover:text-blue-600">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => handleDelete(cls)} className="p-1 hover:bg-gray-100 rounded text-gray-500 hover:text-red-600">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="text-sm text-gray-600 space-y-1">

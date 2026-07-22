@@ -42,3 +42,12 @@ export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: passwordSchema,
 })
+
+export const updateUserSchema = z.object({
+  role: z.enum([
+    'SUPER_ADMIN', 'SCHOOL_OWNER', 'SCHOOL_ADMIN', 'ACADEMIC_HEAD',
+    'TEACHER', 'ACCOUNTANT', 'HR_MANAGER', 'LIBRARIAN',
+    'TRANSPORT_COORDINATOR', 'STUDENT', 'PARENT', 'WARDEN',
+  ]).optional(),
+  isActive: z.boolean().optional(),
+})

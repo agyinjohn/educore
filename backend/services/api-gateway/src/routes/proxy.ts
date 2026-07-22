@@ -96,6 +96,24 @@ router.use(
   prefixed(config.services.report, '/api/v1/reports')
 )
 
+// ─── AI Service ────────────────────────────────────────────────────────────────
+router.use(
+  '/ai',
+  generalLimiter,
+  authenticate,
+  enforceTenantScope,
+  prefixed(config.services.ai, '/api/v1/ai')
+)
+
+// ─── Chatbot Service ───────────────────────────────────────────────────────────
+router.use(
+  '/chatbot',
+  generalLimiter,
+  authenticate,
+  enforceTenantScope,
+  prefixed(config.services.chatbot, '/api/v1/chatbot')
+)
+
 // ─── Notification Service ─────────────────────────────────────────────────────
 // COMM-001 to COMM-029: Bulk notifications, messaging, emergency broadcasts
 router.use(
