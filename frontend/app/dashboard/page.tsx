@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/auth.context';
 import { analyticsService } from '@/lib/services';
+import { notificationService } from '@/lib/services/notification.service';
 import KPICard from '@/components/dashboard/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,9 +20,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, schoolId } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [metrics, setMetrics] = useState<any>(null);
+  const [activity, setActivity] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    if (!user || !schoolId) return;
+    notificationService
+      .getNotificationsForRecipient(user.id, schoolId, 5)
+      .then((res) => setActivity(res.data))
+      .catch(() => setActivity(null));
+  }, [user, schoolId]);
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -164,27 +174,32 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Recent Activity */}
+      {/* Recent Activity — the platform has no generic activity-feed
+          endpoint, so this shows the signed-in user's own notification
+          inbox rather than fabricated placeholder events. */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle>Recent Notifications</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-start gap-4 pb-4 border-b last:border-b-0">
-                <div className="w-2 h-2 rounded-full bg-blue-600 mt-2 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    Activity item {i}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {new Date(Date.now() - i * 3600000).toLocaleString()}
-                  </p>
+          {activity === null ? (
+            <p className="text-sm text-gray-400 py-4">No recent notifications.</p>
+          ) : (
+            <div className="space-y-4">
+              {activity.map((n, i) => (
+                <div key={n.id || i} className="flex items-start gap-4 pb-4 border-b last:border-b-0">
+                  <div className="w-2 h-2 rounded-full bg-blue-600 mt-2 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">{n.title}</p>
+                    <p className="text-xs text-gray-500 mt-1">{n.body}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+              {activity.length === 0 && (
+                <p className="text-sm text-gray-400 py-4">No recent notifications.</p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
