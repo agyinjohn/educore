@@ -159,6 +159,7 @@ services:
       PORT: 4003
       MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
       REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_ACCESS_SECRET:-${JWT_SECRET:-educore-secret-key}}
     depends_on:
       mongodb:
         condition: service_healthy

@@ -2,8 +2,14 @@ import express, { Router } from 'express'
 import * as feeController from '../controllers/fee.controller'
 import * as paymentController from '../controllers/payment.controller'
 import * as invoiceController from '../controllers/invoice.controller'
+import { authenticate, tenantIsolation } from '../middleware/authenticate'
 
 const router: Router = express.Router()
+
+// This service otherwise trusted whatever schoolId a caller claimed in
+// the body/query/params with no verification at all.
+router.use(authenticate)
+router.use(tenantIsolation)
 
 // Fee endpoints
 router.post('/fees/create', feeController.createFee)
