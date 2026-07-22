@@ -1,10 +1,15 @@
 import { Router } from 'express';
 import ReportController from '../controllers/report.controller';
+import { resolveTenant } from '../middleware/resolveTenant';
 
 const router = Router();
 
-// Health check
+// Health check (no tenant header required)
 router.get('/health', (req, res) => ReportController.health(req, res));
+
+// Everything below trusts the gateway to have authenticated the caller and
+// injected x-school-id.
+router.use(resolveTenant);
 
 // Report Templates
 router.get('/templates', (req, res) => ReportController.getTemplates(req, res));

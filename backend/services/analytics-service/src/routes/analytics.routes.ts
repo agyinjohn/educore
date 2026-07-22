@@ -1,7 +1,15 @@
 import express, { Router } from 'express';
 import analyticsController from '../controllers/analytics.controller';
+import { resolveTenant } from '../middleware/resolveTenant';
 
 const router: Router = express.Router();
+
+// Health (no tenant header required)
+router.get('/health', (req, res) => analyticsController.health(req, res));
+
+// Everything below trusts the gateway to have authenticated the caller and
+// injected x-school-id.
+router.use(resolveTenant);
 
 // Dashboard
 router.get('/dashboard', (req, res) => analyticsController.getDashboard(req, res));
@@ -22,8 +30,5 @@ router.get('/stats', (req, res) => analyticsController.getSummaryStats(req, res)
 
 // Events
 router.post('/events', (req, res) => analyticsController.logEvent(req, res));
-
-// Health
-router.get('/health', (req, res) => analyticsController.health(req, res));
 
 export default router;

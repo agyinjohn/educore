@@ -25,6 +25,7 @@ export const config = {
     finance: requireEnv('FINANCE_SERVICE_URL'),
     notification: requireEnv('NOTIFICATION_SERVICE_URL'),
     analytics: requireEnv('ANALYTICS_SERVICE_URL'),
+    report: requireEnv('REPORT_SERVICE_URL'),
   },
 
   cors: {

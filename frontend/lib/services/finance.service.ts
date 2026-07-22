@@ -139,20 +139,35 @@ export class FinanceService {
     return apiClient.post<Payment>('/finance/payments/record', request);
   }
 
-  async getPayment(id: string): Promise<ApiResponse<Payment>> {
-    return apiClient.get<Payment>(`/finance/payments/${id}`);
+  async getPayment(id: string, schoolId: string): Promise<ApiResponse<Payment>> {
+    return apiClient.get<Payment>(`/finance/payments/${id}?schoolId=${encodeURIComponent(schoolId)}`);
   }
 
   async getStudentPayments(studentId: string, schoolId: string): Promise<ApiResponse<Payment[]>> {
     return apiClient.get<Payment[]>(`/finance/payments/student/${studentId}/${schoolId}`);
   }
 
-  async getOutstandingPayments(schoolId: string): Promise<ApiResponse<Payment[]>> {
-    return apiClient.get<Payment[]>(`/finance/payments/outstanding/${schoolId}`);
+  async getOutstandingPayments(schoolId: string, studentId?: string): Promise<ApiResponse<Payment[]>> {
+    const query = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
+    return apiClient.get<Payment[]>(`/finance/payments/outstanding/${schoolId}${query}`);
   }
 
-  async refundPayment(id: string, reason: string): Promise<ApiResponse<Payment>> {
-    return apiClient.post<Payment>(`/finance/payments/${id}/refund`, { reason });
+  async getPaymentsByStatus(schoolId: string, status: PaymentStatus, limit?: number): Promise<ApiResponse<Payment[]>> {
+    const query = limit ? `?limit=${limit}` : '';
+    return apiClient.get<Payment[]>(`/finance/payments/status/${schoolId}/${status}${query}`);
+  }
+
+  async updatePaymentStatus(
+    id: string,
+    schoolId: string,
+    status: PaymentStatus,
+    failureReason?: string
+  ): Promise<ApiResponse<Payment>> {
+    return apiClient.patch<Payment>(`/finance/payments/${id}/status`, { schoolId, status, failureReason });
+  }
+
+  async refundPayment(id: string, schoolId: string): Promise<ApiResponse<Payment>> {
+    return apiClient.post<Payment>(`/finance/payments/${id}/refund`, { schoolId });
   }
 
   // ==================== Invoices ====================
@@ -165,15 +180,17 @@ export class FinanceService {
     return apiClient.get<Invoice>(`/finance/invoices/${id}`);
   }
 
-  async listInvoices(params?: { studentId?: string; status?: string }): Promise<ApiResponse<Invoice[]>> {
-    const query = params
-      ? `?${Object.entries(params).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`).join('&')}`
-      : '';
-    return apiClient.get<Invoice[]>(`/finance/invoices${query}`);
+  async listInvoices(schoolId: string, params?: { studentId?: string; status?: string }): Promise<ApiResponse<Invoice[]>> {
+    const query = new URLSearchParams({ schoolId, ...params } as Record<string, string>).toString();
+    return apiClient.get<Invoice[]>(`/finance/invoices?${query}`);
   }
 
-  async sendInvoice(id: string): Promise<ApiResponse<{ message: string }>> {
-    return apiClient.post(`/finance/invoices/${id}/send`, {});
+  async updateInvoiceStatus(id: string, status: InvoiceStatus): Promise<ApiResponse<Invoice>> {
+    return apiClient.patch<Invoice>(`/finance/invoices/${id}/status`, { status });
+  }
+
+  async sendInvoice(id: string, recipientEmail: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.post(`/finance/invoices/${id}/send`, { recipientEmail });
   }
 
   async getOverdueInvoices(schoolId: string): Promise<ApiResponse<Invoice[]>> {

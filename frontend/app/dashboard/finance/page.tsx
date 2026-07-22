@@ -145,9 +145,10 @@ export default function FinancePage() {
       )}
 
       {/* Quick Links */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { href: '/dashboard/finance/fee-structures', label: 'Fee Structures', desc: 'Manage fee plans by class' },
+          { href: '/dashboard/finance/fee-structures', label: 'Fees', desc: 'Manage the fee catalog' },
+          { href: '/dashboard/finance/student-fees', label: 'Student Fees', desc: 'Look up a student’s balance' },
           { href: '/dashboard/finance/payments', label: 'Payments', desc: 'Record & view all payments' },
           { href: '/dashboard/finance/invoices', label: 'Invoices', desc: 'Generate & send invoices' },
         ].map((item) => (

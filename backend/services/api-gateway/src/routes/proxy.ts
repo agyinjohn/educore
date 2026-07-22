@@ -86,6 +86,16 @@ router.use(
   prefixed(config.services.analytics, '/api/v1/analytics')
 )
 
+// ─── Report Service ────────────────────────────────────────────────────────────
+router.use(
+  '/reports',
+  generalLimiter,
+  authenticate,
+  enforceTenantScope,
+  authorize(Resource.REPORT, Action.VIEW),
+  prefixed(config.services.report, '/api/v1/reports')
+)
+
 // ─── Notification Service ─────────────────────────────────────────────────────
 // COMM-001 to COMM-029: Bulk notifications, messaging, emergency broadcasts
 router.use(

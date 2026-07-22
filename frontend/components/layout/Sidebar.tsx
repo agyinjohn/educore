@@ -13,6 +13,7 @@ import {
   BarChart3,
   Settings,
   FileText,
+  ShieldCheck,
   Menu,
 } from 'lucide-react';
 
@@ -25,6 +26,8 @@ interface SidebarProps {
 // the JWT carries roles like 'SCHOOL_ADMIN', not 'admin'.
 const ADMIN_ROLES = ['SUPER_ADMIN', 'SCHOOL_OWNER', 'SCHOOL_ADMIN'];
 const STAFF_ROLES = [...ADMIN_ROLES, 'ACADEMIC_HEAD', 'TEACHER'];
+// Matches the gateway's Resource.REPORT permission grants (@educore/shared) — TEACHER isn't included.
+const REPORT_ROLES = [...ADMIN_ROLES, 'ACADEMIC_HEAD', 'ACCOUNTANT', 'HR_MANAGER'];
 const EVERYONE = [...STAFF_ROLES, 'ACCOUNTANT', 'HR_MANAGER', 'LIBRARIAN', 'TRANSPORT_COORDINATOR', 'WARDEN', 'STUDENT', 'PARENT'];
 
 const navigation = [
@@ -62,7 +65,13 @@ const navigation = [
     name: 'Reports',
     href: '/dashboard/reports',
     icon: FileText,
-    roles: STAFF_ROLES,
+    roles: REPORT_ROLES,
+  },
+  {
+    name: 'Admin',
+    href: '/dashboard/admin',
+    icon: ShieldCheck,
+    roles: ADMIN_ROLES,
   },
   {
     name: 'Settings',

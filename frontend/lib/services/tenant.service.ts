@@ -43,6 +43,10 @@ class TenantService {
   async getSchoolBySubdomain(subdomain: string): Promise<ApiResponse<School>> {
     return apiClient.get<School>(`/tenants/subdomain/${subdomain}`);
   }
+
+  async updateSchool(id: string, data: Partial<Omit<CreateSchoolRequest, 'subdomain'>>): Promise<ApiResponse<School>> {
+    return apiClient.patch<School>(`/tenants/${id}`, data);
+  }
 }
 
 export const tenantService = new TenantService();
