@@ -1,0 +1,307 @@
+version: '3.9'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7-alpine
+    container_name: educore-mongodb
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: educore
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+    networks:
+      - educore-network
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', 'db.adminCommand("ping")']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: educore-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - educore-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # API Gateway - Port 3000
+  api-gateway:
+    build:
+      context: ./backend/services/api-gateway
+      dockerfile: Dockerfile
+    container_name: educore-api-gateway
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
+      REDIS_URL: redis://redis:6379
+      AUTH_SERVICE_URL: http://auth-service:4000
+      STUDENT_SERVICE_URL: http://student-service:4001
+      ACADEMIC_SERVICE_URL: http://academic-service:4002
+      FINANCE_SERVICE_URL: http://finance-service:4003
+      NOTIFICATION_SERVICE_URL: http://notification-service:4004
+      TENANT_SERVICE_URL: http://tenant-service:4005
+      REPORT_SERVICE_URL: http://report-service:4009
+      ANALYTICS_SERVICE_URL: http://analytics-service:4008
+      AI_SERVICE_URL: http://ai-service:4009
+      CHATBOT_SERVICE_URL: http://chatbot-service:4010
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educore-network
+    restart: unless-stopped
+
+  # Auth Service - Port 4000
+  auth-service:
+    build:
+      context: ./backend/services/auth-service
+      dockerfile: Dockerfile
+    container_name: educore-auth-service
+    ports:
+      - '4000:4000'
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-educore-secret-key}
+      JWT_EXPIRE: 7d
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educore-network
+    restart: unless-stopped
+
+  # Student Service - Port 4001
+  student-service:
+    build:
+      context: ./backend/services/student-service
+      dockerfile: Dockerfile
+    container_name: educore-student-service
+    ports:
+      - '4001:4001'
+    environment:
+      NODE_ENV: development
+      PORT: 4001
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educore-network
+    restart: unless-stopped
+
+  # Academic Service - Port 4002
+  academic-service:
+    build:
+      context: ./backend/services/academic-service
+      dockerfile: Dockerfile
+    container_name: educore-academic-service
+    ports:
+      - '4002:4002'
+    environment:
+      NODE_ENV: development
+      PORT: 4002
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educore-network
+    restart: unless-stopped
+
+  # Finance Service - Port 4003
+  finance-service:
+    build:
+      context: ./backend/services/finance-service
+      dockerfile: Dockerfile
+    container_name: educore-finance-service
+    ports:
+      - '4003:4003'
+    environment:
+      NODE_ENV: development
+      PORT: 4003
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educore-network
+    restart: unless-stopped
+
+  # Notification Service - Port 4004
+  notification-service:
+    build:
+      context: ./backend/services/notification-service
+      dockerfile: Dockerfile
+    container_name: educore-notification-service
+    ports:
+      - '4004:4004'
+    environment:
+      NODE_ENV: development
+      PORT: 4004
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
+      REDIS_URL: redis://redis:6379
+      SMTP_HOST: ${SMTP_HOST:-mailhog}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educore-network
+    restart: unless-stopped
+
+  # Tenant Service - Port 4005
+  tenant-service:
+    build:
+      context: ./backend/services/tenant-service
+      dockerfile: Dockerfile
+    container_name: educore-tenant-service
+    ports:
+      - '4005:4005'
+    environment:
+      NODE_ENV: development
+      PORT: 4005
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educore-network
+    restart: unless-stopped
+
+  # Analytics Service - Port 4008
+  analytics-service:
+    build:
+      context: ./backend/services/analytics-service
+      dockerfile: Dockerfile
+    container_name: educore-analytics-service
+    ports:
+      - '4008:4008'
+    environment:
+      NODE_ENV: development
+      PORT: 4008
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educore-network
+    restart: unless-stopped
+
+  # Report Service - Port 4009
+  report-service:
+    build:
+      context: ./backend/services/report-service
+      dockerfile: Dockerfile
+    container_name: educore-report-service
+    ports:
+      - '4009:4009'
+    environment:
+      NODE_ENV: development
+      PORT: 4009
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educore-network
+    restart: unless-stopped
+
+  # AI Service - Port 4009
+  ai-service:
+    build:
+      context: ./backend/services/ai-service
+      dockerfile: Dockerfile
+    container_name: educore-ai-service
+    ports:
+      - '4009:4009'
+    environment:
+      NODE_ENV: development
+      PORT: 4009
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
+      REDIS_URL: redis://redis:6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educore-network
+    restart: unless-stopped
+
+  # Chatbot Service - Port 4010
+  chatbot-service:
+    build:
+      context: ./backend/services/chatbot-service
+      dockerfile: Dockerfile
+    container_name: educore-chatbot-service
+    ports:
+      - '4010:4010'
+    environment:
+      NODE_ENV: development
+      PORT: 4010
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/educore?authSource=admin
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educore-network
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  mongo_config:
+  redis_data:
+
+networks:
+  educore-network:
+    driver: bridge

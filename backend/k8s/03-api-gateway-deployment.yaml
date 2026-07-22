@@ -1,0 +1,170 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: educore
+  labels:
+    app: api-gateway
+spec:
+  type: LoadBalancer
+  selector:
+    app: api-gateway
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 3000
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: educore
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - api-gateway
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: api-gateway
+          image: educore/api-gateway:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: API_GATEWAY_PORT
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: MONGODB_URI
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: REDIS_URL
+            - name: AUTH_SERVICE_URL
+              value: http://auth-service:4000
+            - name: STUDENT_SERVICE_URL
+              value: http://student-service:4001
+            - name: ACADEMIC_SERVICE_URL
+              value: http://academic-service:4002
+            - name: FINANCE_SERVICE_URL
+              value: http://finance-service:4003
+            - name: NOTIFICATION_SERVICE_URL
+              value: http://notification-service:4004
+            - name: TENANT_SERVICE_URL
+              value: http://tenant-service:4005
+            - name: ANALYTICS_SERVICE_URL
+              value: http://analytics-service:4008
+            - name: REPORT_SERVICE_URL
+              value: http://report-service:4009
+            - name: AI_SERVICE_URL
+              value: http://ai-service:4009
+            - name: CHATBOT_SERVICE_URL
+              value: http://chatbot-service:4010
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 2
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-gateway-hpa
+  namespace: educore
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-gateway
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+      selectPolicy: Max

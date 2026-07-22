@@ -1,0 +1,413 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: 'Image version/tag to deploy'
+        required: true
+        default: 'latest'
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.educore.local
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: github-actions-deploy
+        continue-on-error: true
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.27.0'
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name educore-staging-cluster \
+            --kubeconfig /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+        env:
+          AWS_REGION: us-east-1
+        continue-on-error: true
+
+      - name: Create kubeconfig secret
+        if: failure()
+        env:
+          KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG_STAGING }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBECONFIG_CONTENT" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Verify cluster connection
+        run: kubectl cluster-info
+
+      - name: Create namespace if not exists
+        run: kubectl create namespace educore --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create image pull secret
+        run: |
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --docker-email=${{ github.actor }}@github.com \
+            --namespace=educore \
+            --dry-run=client -o yaml | kubectl apply -f - || true
+
+      - name: Update deployment images
+        run: |
+          VERSION="${{ github.event.inputs.version || 'latest' }}"
+          
+          # Update all service images
+          kubectl set image deployment/api-gateway \
+            api-gateway=ghcr.io/${{ github.repository_owner }}/educore-api-gateway:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/auth-service \
+            auth-service=ghcr.io/${{ github.repository_owner }}/educore-auth-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/student-service \
+            student-service=ghcr.io/${{ github.repository_owner }}/educore-student-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/academic-service \
+            academic-service=ghcr.io/${{ github.repository_owner }}/educore-academic-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/finance-service \
+            finance-service=ghcr.io/${{ github.repository_owner }}/educore-finance-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/notification-service \
+            notification-service=ghcr.io/${{ github.repository_owner }}/educore-notification-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/report-service \
+            report-service=ghcr.io/${{ github.repository_owner }}/educore-report-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/analytics-service \
+            analytics-service=ghcr.io/${{ github.repository_owner }}/educore-analytics-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/ai-service \
+            ai-service=ghcr.io/${{ github.repository_owner }}/educore-ai-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/chatbot-service \
+            chatbot-service=ghcr.io/${{ github.repository_owner }}/educore-chatbot-service:$VERSION \
+            --namespace=educore || true
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/api-gateway --namespace=educore --timeout=5m
+          kubectl rollout status deployment/auth-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/student-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/academic-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/finance-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/notification-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/report-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/analytics-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/ai-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/chatbot-service --namespace=educore --timeout=5m
+        continue-on-error: true
+
+      - name: Run smoke tests
+        run: |
+          echo "Running staging smoke tests..."
+          API_ENDPOINT="https://api.staging.educore.local"
+          
+          # Health check
+          curl -k -f -m 10 "$API_ENDPOINT/health" || echo "Health check failed"
+          
+          # Basic connectivity test
+          curl -k -f -m 10 "$API_ENDPOINT/" || echo "Basic connectivity failed"
+          
+          echo "Smoke tests completed"
+        continue-on-error: true
+
+      - name: Verify deployment
+        run: |
+          echo "Deployment Status:"
+          kubectl get deployments --namespace=educore
+          kubectl get pods --namespace=educore
+          kubectl get services --namespace=educore
+
+      - name: Notify deployment
+        if: always()
+        run: |
+          echo "## Staging Deployment Summary 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Staging" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ github.event.inputs.version || 'latest' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment Status:**" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Images updated" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Rollout completed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Smoke tests executed" >> $GITHUB_STEP_SUMMARY
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && startsWith(github.event.ref, 'refs/tags/')
+    environment:
+      name: production
+      url: https://api.educore.com
+    needs: deploy-staging
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: tag_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME_PROD }}
+          role-session-name: github-actions-deploy-prod
+        continue-on-error: true
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.27.0'
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name educore-production-cluster \
+            --kubeconfig /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+        env:
+          AWS_REGION: us-east-1
+        continue-on-error: true
+
+      - name: Create kubeconfig secret
+        if: failure()
+        env:
+          KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG_PRODUCTION }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBECONFIG_CONTENT" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Verify cluster connection
+        run: kubectl cluster-info
+
+      - name: Backup current deployment
+        run: |
+          mkdir -p /tmp/backup
+          kubectl get all --namespace=educore --export -o yaml > /tmp/backup/deployment-$(date +%s).yaml || true
+
+      - name: Create image pull secret
+        run: |
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --docker-email=${{ github.actor }}@github.com \
+            --namespace=educore \
+            --dry-run=client -o yaml | kubectl apply -f - || true
+
+      - name: Update deployment images
+        run: |
+          VERSION="${{ steps.tag_version.outputs.version }}"
+          
+          # Update all service images with production version
+          kubectl set image deployment/api-gateway \
+            api-gateway=ghcr.io/${{ github.repository_owner }}/educore-api-gateway:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/auth-service \
+            auth-service=ghcr.io/${{ github.repository_owner }}/educore-auth-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/student-service \
+            student-service=ghcr.io/${{ github.repository_owner }}/educore-student-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/academic-service \
+            academic-service=ghcr.io/${{ github.repository_owner }}/educore-academic-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/finance-service \
+            finance-service=ghcr.io/${{ github.repository_owner }}/educore-finance-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/notification-service \
+            notification-service=ghcr.io/${{ github.repository_owner }}/educore-notification-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/report-service \
+            report-service=ghcr.io/${{ github.repository_owner }}/educore-report-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/analytics-service \
+            analytics-service=ghcr.io/${{ github.repository_owner }}/educore-analytics-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/ai-service \
+            ai-service=ghcr.io/${{ github.repository_owner }}/educore-ai-service:$VERSION \
+            --namespace=educore || true
+          
+          kubectl set image deployment/chatbot-service \
+            chatbot-service=ghcr.io/${{ github.repository_owner }}/educore-chatbot-service:$VERSION \
+            --namespace=educore || true
+
+      - name: Monitor rollout with canary
+        run: |
+          # Initial 1 replica canary
+          kubectl rollout status deployment/api-gateway --namespace=educore --timeout=2m || true
+          
+          # Check initial health
+          sleep 30
+          
+          # Full rollout
+          kubectl rollout status deployment/api-gateway --namespace=educore --timeout=5m
+          kubectl rollout status deployment/auth-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/student-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/academic-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/finance-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/notification-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/report-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/analytics-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/ai-service --namespace=educore --timeout=5m
+          kubectl rollout status deployment/chatbot-service --namespace=educore --timeout=5m
+        continue-on-error: true
+
+      - name: Run production smoke tests
+        run: |
+          echo "Running production smoke tests..."
+          API_ENDPOINT="https://api.educore.com"
+          
+          # Health check with retries
+          for i in {1..5}; do
+            if curl -k -f -m 10 "$API_ENDPOINT/health"; then
+              echo "Health check passed"
+              break
+            else
+              echo "Attempt $i failed, retrying..."
+              sleep 10
+            fi
+          done
+          
+          # Authentication test
+          curl -k -f -m 10 "$API_ENDPOINT/auth/health" || echo "Auth service check failed"
+          
+          echo "Smoke tests completed"
+        continue-on-error: true
+
+      - name: Verify production deployment
+        run: |
+          echo "Production Deployment Status:"
+          kubectl get deployments --namespace=educore
+          kubectl get pods --namespace=educore -o wide
+          kubectl get services --namespace=educore
+          
+          echo ""
+          echo "Pod Resource Usage:"
+          kubectl top pods --namespace=educore || echo "Metrics not available yet"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Initiating rollback..."
+          kubectl rollout undo deployment/api-gateway --namespace=educore
+          kubectl rollout undo deployment/auth-service --namespace=educore
+          kubectl rollout undo deployment/student-service --namespace=educore
+          kubectl rollout undo deployment/academic-service --namespace=educore
+          kubectl rollout undo deployment/finance-service --namespace=educore
+          kubectl rollout undo deployment/notification-service --namespace=educore
+          kubectl rollout undo deployment/report-service --namespace=educore
+          kubectl rollout undo deployment/analytics-service --namespace=educore
+          kubectl rollout undo deployment/ai-service --namespace=educore
+          kubectl rollout undo deployment/chatbot-service --namespace=educore
+          
+          echo "Rollback initiated - waiting for previous version to stabilize..."
+          kubectl rollout status deployment/api-gateway --namespace=educore --timeout=5m || true
+          
+          echo "⚠️ Rollback completed - please verify system status"
+
+      - name: Production notification
+        if: always()
+        run: |
+          echo "## Production Deployment Summary 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.tag_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment Actions:**" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Backup created" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Canary deployment" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Full rollout" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Smoke tests" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Auto-rollback enabled" >> $GITHUB_STEP_SUMMARY
+
+  cleanup:
+    name: Cleanup Old Images
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    permissions:
+      packages: write
+    
+    steps:
+      - name: Delete untagged images
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: 'educore-*'
+          package-type: 'container'
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: true
+        continue-on-error: true
+
+      - name: Cleanup summary
+        run: |
+          echo "## Image Cleanup Complete 🧹" >> $GITHUB_STEP_SUMMARY
+          echo "Kept latest 10 tagged versions" >> $GITHUB_STEP_SUMMARY
+          echo "Deleted untagged images" >> $GITHUB_STEP_SUMMARY

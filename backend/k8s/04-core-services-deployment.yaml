@@ -1,0 +1,421 @@
+---
+# Auth Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: educore
+  labels:
+    app: auth-service
+spec:
+  selector:
+    app: auth-service
+  ports:
+    - name: http
+      port: 4000
+      targetPort: 4000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: educore
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth-service
+          image: educore/auth-service:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 4000
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: AUTH_SERVICE_PORT
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: MONGODB_URI
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: REDIS_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: JWT_SECRET
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: auth-service-hpa
+  namespace: educore
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: auth-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# Student Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: student-service
+  namespace: educore
+  labels:
+    app: student-service
+spec:
+  selector:
+    app: student-service
+  ports:
+    - name: http
+      port: 4001
+      targetPort: 4001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: student-service
+  namespace: educore
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: student-service
+  template:
+    metadata:
+      labels:
+        app: student-service
+    spec:
+      containers:
+        - name: student-service
+          image: educore/student-service:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 4001
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: STUDENT_SERVICE_PORT
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: MONGODB_URI
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: REDIS_URL
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: student-service-hpa
+  namespace: educore
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: student-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# Academic Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: academic-service
+  namespace: educore
+  labels:
+    app: academic-service
+spec:
+  selector:
+    app: academic-service
+  ports:
+    - name: http
+      port: 4002
+      targetPort: 4002
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: academic-service
+  namespace: educore
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: academic-service
+  template:
+    metadata:
+      labels:
+        app: academic-service
+    spec:
+      containers:
+        - name: academic-service
+          image: educore/academic-service:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 4002
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: ACADEMIC_SERVICE_PORT
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: MONGODB_URI
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: REDIS_URL
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: academic-service-hpa
+  namespace: educore
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: academic-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# Finance Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: finance-service
+  namespace: educore
+  labels:
+    app: finance-service
+spec:
+  selector:
+    app: finance-service
+  ports:
+    - name: http
+      port: 4003
+      targetPort: 4003
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finance-service
+  namespace: educore
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: finance-service
+  template:
+    metadata:
+      labels:
+        app: finance-service
+    spec:
+      containers:
+        - name: finance-service
+          image: educore/finance-service:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 4003
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: FINANCE_SERVICE_PORT
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: MONGODB_URI
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: REDIS_URL
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4003
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4003
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: finance-service-hpa
+  namespace: educore
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: finance-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

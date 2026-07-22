@@ -1,0 +1,467 @@
+---
+# Analytics Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: educore
+  labels:
+    app: analytics-service
+spec:
+  selector:
+    app: analytics-service
+  ports:
+    - name: http
+      port: 4008
+      targetPort: 4008
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  namespace: educore
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4008"
+    spec:
+      containers:
+        - name: analytics-service
+          image: educore/analytics-service:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 4008
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: ANALYTICS_SERVICE_PORT
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: MONGODB_URI
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: REDIS_URL
+          resources:
+            requests:
+              cpu: 300m
+              memory: 512Mi
+            limits:
+              cpu: 800m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4008
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4008
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: analytics-service-hpa
+  namespace: educore
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: analytics-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+---
+# Report Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: report-service
+  namespace: educore
+  labels:
+    app: report-service
+spec:
+  selector:
+    app: report-service
+  ports:
+    - name: http
+      port: 4009
+      targetPort: 4009
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: report-service
+  namespace: educore
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: report-service
+  template:
+    metadata:
+      labels:
+        app: report-service
+    spec:
+      containers:
+        - name: report-service
+          image: educore/report-service:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 4009
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: REPORT_SERVICE_PORT
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: MONGODB_URI
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: REDIS_URL
+          resources:
+            requests:
+              cpu: 300m
+              memory: 512Mi
+            limits:
+              cpu: 800m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4009
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4009
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: report-service-hpa
+  namespace: educore
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: report-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+---
+# AI Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-service
+  namespace: educore
+  labels:
+    app: ai-service
+spec:
+  selector:
+    app: ai-service
+  ports:
+    - name: http
+      port: 4009
+      targetPort: 4009
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-service
+  namespace: educore
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: ai-service
+  template:
+    metadata:
+      labels:
+        app: ai-service
+    spec:
+      containers:
+        - name: ai-service
+          image: educore/ai-service:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 4009
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: AI_SERVICE_PORT
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: MONGODB_URI
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: REDIS_URL
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: OPENAI_API_KEY
+                  optional: true
+          resources:
+            requests:
+              cpu: 400m
+              memory: 768Mi
+            limits:
+              cpu: 1000m
+              memory: 1536Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4009
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4009
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-service-hpa
+  namespace: educore
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+---
+# Chatbot Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatbot-service
+  namespace: educore
+  labels:
+    app: chatbot-service
+spec:
+  selector:
+    app: chatbot-service
+  ports:
+    - name: http
+      port: 4010
+      targetPort: 4010
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatbot-service
+  namespace: educore
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: chatbot-service
+  template:
+    metadata:
+      labels:
+        app: chatbot-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4010"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - chatbot-service
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: chatbot-service
+          image: educore/chatbot-service:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 4010
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: educore-config
+                  key: CHATBOT_SERVICE_PORT
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: MONGODB_URI
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: educore-secrets
+                  key: REDIS_URL
+          resources:
+            requests:
+              cpu: 300m
+              memory: 512Mi
+            limits:
+              cpu: 800m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /api/v1/chatbot/health
+              port: 4010
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/v1/chatbot/health
+              port: 4010
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: chatbot-service-hpa
+  namespace: educore
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: chatbot-service
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+      selectPolicy: Max

@@ -1,0 +1,34 @@
+{
+  "name": "@educore/finance-service",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "nodemon --exec 'ts-node -r tsconfig-paths/register src/index.ts'",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest --config jest.config.js",
+    "test:watch": "jest --config jest.config.js --watch"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "cors": "^2.8.5",
+    "morgan": "^1.10.0",
+    "dotenv": "^16.4.5",
+    "mongoose": "^8.4.1",
+    "ioredis": "^5.4.1",
+    "zod": "^3.23.8",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "ts-node": "^10.9.2",
+    "nodemon": "^3.1.3",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "@types/jest": "^29.5.11",
+    "supertest": "^6.3.3",
+    "@types/supertest": "^6.0.2"
+  }
+}

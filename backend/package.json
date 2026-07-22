@@ -1,0 +1,33 @@
+{
+  "name": "@educore/backend",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "services/*",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"gateway,auth,tenant,student,academic,finance,notify\" -c \"bgBlue,bgGreen,bgYellow,bgMagenta,bgCyan,bgRed,bgWhite\" \"npm run dev --prefix services/api-gateway\" \"npm run dev --prefix services/auth-service\" \"npm run dev --prefix services/tenant-service\" \"npm run dev --prefix services/student-service\" \"npm run dev --prefix services/academic-service\" \"npm run dev --prefix services/finance-service\" \"npm run dev --prefix services/notification-service\"",
+    "dev:gateway": "npm run dev --prefix services/api-gateway",
+    "dev:auth": "npm run dev --prefix services/auth-service",
+    "dev:core": "concurrently -n \"gateway,auth\" -c \"bgBlue,bgGreen\" \"npm run dev --prefix services/api-gateway\" \"npm run dev --prefix services/auth-service\"",
+    "dev:phase1": "concurrently -n \"gateway,auth,tenant,student,academic\" -c \"bgBlue,bgGreen,bgYellow,bgMagenta,bgCyan\" \"npm run dev --prefix services/api-gateway\" \"npm run dev --prefix services/auth-service\" \"npm run dev --prefix services/tenant-service\" \"npm run dev --prefix services/student-service\" \"npm run dev --prefix services/academic-service\"",
+    "build": "npm run build --prefix services/api-gateway && npm run build --prefix services/auth-service",
+    "test": "npm run test --prefix services/auth-service && npm run test --prefix services/tenant-service && npm run test --prefix services/student-service && npm run test --prefix services/academic-service && npm run test --prefix services/finance-service",
+    "test:auth": "npm run test --prefix services/auth-service",
+    "test:tenant": "npm run test --prefix services/tenant-service",
+    "test:student": "npm run test --prefix services/student-service",
+    "test:academic": "npm run test --prefix services/academic-service",
+    "test:finance": "npm run test --prefix services/finance-service",
+    "test:coverage": "npm run test --prefix services/auth-service -- --coverage && npm run test --prefix services/tenant-service -- --coverage && npm run test --prefix services/student-service -- --coverage && npm run test --prefix services/academic-service -- --coverage && npm run test --prefix services/finance-service -- --coverage",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "ioredis": "^5.10.1",
+    "mongoose": "^9.6.2",
+    "tsconfig-paths": "^4.2.0"
+  }
+}
