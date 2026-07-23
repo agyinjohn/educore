@@ -28,6 +28,7 @@
   "dependencies": {
     "ioredis": "^5.10.1",
     "mongoose": "^9.6.2",
+    "nodemon": "^3.1.14",
     "tsconfig-paths": "^4.2.0"
   }
 }

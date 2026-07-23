@@ -43,7 +43,6 @@ export enum BroadcastType {
 }
 
 export interface IMessage {
-  _id?: string
   school_id: string
   title: string
   body: string
@@ -67,7 +66,6 @@ export interface IMessage {
 }
 
 export interface IMessageTemplate {
-  _id?: string
   school_id: string
   name: string
   description: string
@@ -82,7 +80,6 @@ export interface IMessageTemplate {
 }
 
 export interface IDeliveryStatus {
-  _id?: string
   school_id: string
   messageId: string
   recipientId: string
@@ -101,7 +98,6 @@ export interface IDeliveryStatus {
 }
 
 export interface IParentMessage {
-  _id?: string
   school_id: string
   threadId: string
   parentId: string
@@ -117,7 +113,6 @@ export interface IParentMessage {
 }
 
 export interface IMessageThread {
-  _id?: string
   school_id: string
   parentId: string
   teacherId: string
@@ -131,7 +126,6 @@ export interface IMessageThread {
 }
 
 export interface IEmergencyBroadcast {
-  _id?: string
   school_id: string
   title: string
   body: string

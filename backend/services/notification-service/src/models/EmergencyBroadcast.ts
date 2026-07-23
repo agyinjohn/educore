@@ -1,9 +1,7 @@
-import mongoose, { Schema, Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 import { IEmergencyBroadcast, BroadcastType, NotificationChannel } from '../types'
 
-interface IEmergencyBroadcastDoc extends IEmergencyBroadcast, Document {}
-
-const emergencyBroadcastSchema = new Schema<IEmergencyBroadcastDoc>(
+const emergencyBroadcastSchema = new Schema<IEmergencyBroadcast>(
   {
     school_id: { type: String, required: true, index: true },
     title: { type: String, required: true },
@@ -27,7 +25,7 @@ const emergencyBroadcastSchema = new Schema<IEmergencyBroadcastDoc>(
 
 emergencyBroadcastSchema.index({ school_id: 1, priority: 1, createdAt: -1 })
 
-export const EmergencyBroadcastModel = mongoose.model<IEmergencyBroadcastDoc>(
+export const EmergencyBroadcastModel = mongoose.model<IEmergencyBroadcast>(
   'EmergencyBroadcast',
   emergencyBroadcastSchema
 )

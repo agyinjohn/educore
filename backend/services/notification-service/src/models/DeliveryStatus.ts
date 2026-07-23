@@ -1,9 +1,7 @@
-import mongoose, { Schema, Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 import { IDeliveryStatus, DeliveryStatus, NotificationChannel } from '../types'
 
-interface IDeliveryStatusDoc extends IDeliveryStatus, Document {}
-
-const deliveryStatusSchema = new Schema<IDeliveryStatusDoc>(
+const deliveryStatusSchema = new Schema<IDeliveryStatus>(
   {
     school_id: { type: String, required: true, index: true },
     messageId: { type: String, required: true, index: true },
@@ -34,7 +32,7 @@ deliveryStatusSchema.index({ school_id: 1, messageId: 1, status: 1 })
 deliveryStatusSchema.index({ school_id: 1, recipientId: 1, createdAt: -1 })
 deliveryStatusSchema.index({ school_id: 1, status: 1 })
 
-export const DeliveryStatusModel = mongoose.model<IDeliveryStatusDoc>(
+export const DeliveryStatusModel = mongoose.model<IDeliveryStatus>(
   'DeliveryStatus',
   deliveryStatusSchema
 )

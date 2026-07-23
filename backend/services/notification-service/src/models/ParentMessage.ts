@@ -1,9 +1,7 @@
-import mongoose, { Schema, Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 import { IParentMessage } from '../types'
 
-interface IParentMessageDoc extends IParentMessage, Document {}
-
-const parentMessageSchema = new Schema<IParentMessageDoc>(
+const parentMessageSchema = new Schema<IParentMessage>(
   {
     school_id: { type: String, required: true, index: true },
     threadId: { type: String, required: true, index: true },
@@ -27,7 +25,7 @@ parentMessageSchema.index({ school_id: 1, threadId: 1, createdAt: -1 })
 parentMessageSchema.index({ school_id: 1, parentId: 1 })
 parentMessageSchema.index({ school_id: 1, teacherId: 1 })
 
-export const ParentMessageModel = mongoose.model<IParentMessageDoc>(
+export const ParentMessageModel = mongoose.model<IParentMessage>(
   'ParentMessage',
   parentMessageSchema
 )

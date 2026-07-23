@@ -1,9 +1,7 @@
-import mongoose, { Schema, Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 import { IMessage, MessageStatus, NotificationChannel, AudienceType } from '../types'
 
-interface IMessageDoc extends IMessage, Document {}
-
-const messageSchema = new Schema<IMessageDoc>(
+const messageSchema = new Schema<IMessage>(
   {
     school_id: { type: String, required: true, index: true },
     title: { type: String, required: true },
@@ -44,4 +42,4 @@ messageSchema.index({ school_id: 1, status: 1 })
 messageSchema.index({ school_id: 1, createdAt: -1 })
 messageSchema.index({ school_id: 1, sendAt: 1 })
 
-export const MessageModel = mongoose.model<IMessageDoc>('Message', messageSchema)
+export const MessageModel = mongoose.model<IMessage>('Message', messageSchema)
