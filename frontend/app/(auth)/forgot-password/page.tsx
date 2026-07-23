@@ -6,7 +6,7 @@ import { authService } from '@/lib/services';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2, ArrowLeft, MailCheck } from 'lucide-react';
+import { Loader2, ArrowLeft, MailCheck, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ForgotPasswordPage() {
@@ -80,15 +80,18 @@ export default function ForgotPasswordPage() {
           <Label htmlFor="email" className="text-sm font-medium text-gray-700">
             Email address
           </Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="you@school.com"
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); setError(''); }}
-            disabled={isLoading}
-            className={`h-11 ${error ? 'border-red-400' : ''}`}
-          />
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@school.com"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setError(''); }}
+              disabled={isLoading}
+              className={`h-11 pl-10 focus-visible:ring-blue-500/25 focus-visible:border-blue-500 ${error ? 'border-red-400' : ''}`}
+            />
+          </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
         </div>
 

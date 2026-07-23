@@ -4,11 +4,10 @@ import React, { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { authService } from '@/lib/services';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Lock, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 // useSearchParams() opts the tree into client-side rendering and must be
@@ -128,193 +127,155 @@ function ResetPasswordForm() {
       case 'medium':
         return 'bg-yellow-500';
       case 'strong':
-        return 'bg-green-500';
+        return 'bg-emerald-500';
     }
   };
 
   if (isSubmitted) {
     return (
-      <Card className="shadow-lg">
-        <CardHeader className="space-y-2 text-center">
-          <div className="flex justify-center mb-2">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
+      <div className="space-y-6 text-center">
+        <div className="flex justify-center">
+          <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center">
+            <CheckCircle2 className="w-8 h-8 text-emerald-600" />
           </div>
-          <CardTitle className="text-2xl">Password Reset Successful</CardTitle>
-          <CardDescription>
-            Your password has been reset successfully
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="text-center py-6">
-          <p className="text-gray-600 mb-4">
-            Redirecting to login page...
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-gray-900">Password reset successful</h2>
+          <p className="text-gray-500 text-sm leading-relaxed">
+            Redirecting you to sign in...
           </p>
-          <Link
-            href="/login"
-            className="inline-block text-blue-600 hover:text-blue-700 font-medium"
-          >
+        </div>
+        <Link href="/login">
+          <Button variant="outline" className="w-full h-11 border-gray-300 text-gray-700">
             Click here if not redirected automatically
-          </Link>
-        </CardContent>
-      </Card>
+          </Button>
+        </Link>
+      </div>
     );
   }
 
   if (!token) {
     return (
-      <Card className="shadow-lg">
-        <CardHeader className="space-y-2 text-center">
-          <CardTitle className="text-2xl">Invalid Token</CardTitle>
-          <CardDescription>
-            The reset link is invalid or has expired
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="text-center py-6">
-          <p className="text-gray-600 mb-4">
-            Please request a new password reset link
+      <div className="space-y-6 text-center">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-gray-900">Invalid or expired link</h2>
+          <p className="text-gray-500 text-sm leading-relaxed">
+            This password reset link is invalid or has expired. Please request a new one.
           </p>
-          <Link
-            href="/forgot-password"
-            className="inline-block text-blue-600 hover:text-blue-700 font-medium"
-          >
-            Back to forgot password
-          </Link>
-        </CardContent>
-      </Card>
+        </div>
+        <Link href="/forgot-password">
+          <Button className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg">
+            Request a new link
+          </Button>
+        </Link>
+      </div>
     );
   }
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader className="space-y-2 text-center">
-        <div className="flex justify-center mb-2">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">E</span>
-          </div>
-        </div>
-        <CardTitle className="text-2xl">Set New Password</CardTitle>
-        <CardDescription>
-          Enter your new password below
-        </CardDescription>
-      </CardHeader>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Set new password</h2>
+        <p className="text-gray-500">
+          Choose a strong password for your account.
+        </p>
+      </div>
 
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Password */}
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-sm font-medium">
-              New Password
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                disabled={isLoading}
-                className={errors.password ? 'border-red-500 pr-10' : 'pr-10'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-            {formData.password && (
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-600">Password strength:</span>
-                  <span className="capitalize text-gray-600">{passwordStrength}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all ${getStrengthColor()}`}
-                    style={{
-                      width: passwordStrength === 'weak' ? '33%' : passwordStrength === 'medium' ? '66%' : '100%'
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-            {errors.password && (
-              <p className="text-sm text-red-500">{errors.password}</p>
-            )}
-          </div>
-
-          {/* Confirm Password */}
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword" className="text-sm font-medium">
-              Confirm Password
-            </Label>
-            <div className="relative">
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                disabled={isLoading}
-                className={errors.confirmPassword ? 'border-red-500 pr-10' : 'pr-10'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                disabled={isLoading}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                {showConfirmPassword ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-            {errors.confirmPassword && (
-              <p className="text-sm text-red-500">{errors.confirmPassword}</p>
-            )}
-          </div>
-
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 h-10"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Resetting Password...
-              </>
-            ) : (
-              'Reset Password'
-            )}
-          </Button>
-
-          <div className="text-center">
-            <Link
-              href="/login"
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Password */}
+        <div className="space-y-1.5">
+          <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+            New password
+          </Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={handleChange}
+              disabled={isLoading}
+              className={`h-11 pl-10 pr-10 focus-visible:ring-blue-500/25 focus-visible:border-blue-500 ${errors.password ? 'border-red-400' : ''}`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              disabled={isLoading}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
-              Back to login
-            </Link>
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+          {formData.password && (
+            <div className="space-y-1 pt-0.5">
+              <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${getStrengthColor()}`}
+                  style={{
+                    width: passwordStrength === 'weak' ? '33%' : passwordStrength === 'medium' ? '66%' : '100%',
+                  }}
+                />
+              </div>
+              <p className={`text-xs font-medium capitalize ${
+                passwordStrength === 'weak' ? 'text-red-500' : passwordStrength === 'medium' ? 'text-yellow-600' : 'text-emerald-600'
+              }`}>{passwordStrength} password</p>
+            </div>
+          )}
+          {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
+        </div>
+
+        {/* Confirm Password */}
+        <div className="space-y-1.5">
+          <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+            Confirm password
+          </Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              disabled={isLoading}
+              className={`h-11 pl-10 pr-10 focus-visible:ring-blue-500/25 focus-visible:border-blue-500 ${errors.confirmPassword ? 'border-red-400' : ''}`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              disabled={isLoading}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {errors.confirmPassword && <p className="text-xs text-red-500">{errors.confirmPassword}</p>}
+        </div>
+
+        {/* Submit Button */}
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg transition-colors"
+        >
+          {isLoading ? (
+            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Resetting password...</>
+          ) : (
+            'Reset password'
+          )}
+        </Button>
+      </form>
+
+      <Link
+        href="/login"
+        className="flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-gray-700"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to sign in
+      </Link>
+    </div>
   );
 }
