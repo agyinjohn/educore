@@ -28,14 +28,22 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 flex-col justify-between p-12 relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-32 -left-32 w-96 h-96 bg-white/5 rounded-full" />
-          <div className="absolute top-1/3 -right-24 w-72 h-72 bg-white/5 rounded-full" />
-          <div className="absolute -bottom-20 left-1/4 w-64 h-64 bg-white/5 rounded-full" />
+          <div
+            className="absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                'linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)',
+              backgroundSize: '48px 48px',
+            }}
+          />
+          <div className="absolute -top-32 -left-32 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/3 -right-24 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-20 left-1/4 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
         </div>
 
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-white/15 backdrop-blur border border-white/20 shadow-lg rounded-xl flex items-center justify-center">
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
           <span className="text-white text-xl font-bold tracking-tight">EduCore</span>
@@ -56,7 +64,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <ul className="space-y-4">
             {(isLogin ? loginFeatures : registerFeatures).map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-white/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 bg-white/10 border border-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Icon className="w-4 h-4 text-white" />
                 </div>
                 <span className="text-blue-50 text-sm">{text}</span>
@@ -99,10 +107,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       {/* ── Right Panel ── */}
-      <div className="flex-1 flex flex-col min-h-screen bg-white">
+      <div className="flex-1 flex flex-col min-h-screen bg-gray-50/60">
         {/* Mobile logo */}
-        <div className="lg:hidden flex items-center gap-2 p-6 border-b border-gray-100">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+        <div className="lg:hidden flex items-center gap-2 px-6 py-4 border-b border-gray-100 bg-white">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-600/30">
             <GraduationCap className="w-4 h-4 text-white" />
           </div>
           <span className="text-gray-900 font-bold">EduCore</span>
@@ -110,7 +118,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         {/* Form area */}
         <div className="flex-1 flex items-center justify-center p-6 sm:p-10">
-          <div className="w-full max-w-md">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-gray-200/80 shadow-sm shadow-gray-900/5 p-8 sm:p-10">
             {children}
           </div>
         </div>

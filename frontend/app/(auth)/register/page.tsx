@@ -8,7 +8,7 @@ import { tenantService } from '@/lib/services/tenant.service';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Loader2, Check, Building2, PartyPopper } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Check, Building2, PartyPopper, User, Mail, Lock, Phone, MapPin, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -210,26 +210,32 @@ export default function RegisterPage() {
                 <Label className="text-sm font-medium text-gray-700">
                   First name <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  placeholder="John"
-                  value={account.firstName}
-                  onChange={(e) => setAcc('firstName', e.target.value)}
-                  disabled={isLoading}
-                  className={`h-11 ${accountErrors.firstName ? 'border-red-400' : ''}`}
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <Input
+                    placeholder="John"
+                    value={account.firstName}
+                    onChange={(e) => setAcc('firstName', e.target.value)}
+                    disabled={isLoading}
+                    className={`h-11 pl-10 focus-visible:ring-blue-500/25 focus-visible:border-blue-500 ${accountErrors.firstName ? 'border-red-400' : ''}`}
+                  />
+                </div>
                 {accountErrors.firstName && <p className="text-xs text-red-500">{accountErrors.firstName}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">
                   Last name <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  placeholder="Doe"
-                  value={account.lastName}
-                  onChange={(e) => setAcc('lastName', e.target.value)}
-                  disabled={isLoading}
-                  className={`h-11 ${accountErrors.lastName ? 'border-red-400' : ''}`}
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <Input
+                    placeholder="Doe"
+                    value={account.lastName}
+                    onChange={(e) => setAcc('lastName', e.target.value)}
+                    disabled={isLoading}
+                    className={`h-11 pl-10 focus-visible:ring-blue-500/25 focus-visible:border-blue-500 ${accountErrors.lastName ? 'border-red-400' : ''}`}
+                  />
+                </div>
                 {accountErrors.lastName && <p className="text-xs text-red-500">{accountErrors.lastName}</p>}
               </div>
             </div>
@@ -239,14 +245,17 @@ export default function RegisterPage() {
               <Label className="text-sm font-medium text-gray-700">
                 Work email <span className="text-red-500">*</span>
               </Label>
-              <Input
-                type="email"
-                placeholder="you@school.com"
-                value={account.email}
-                onChange={(e) => setAcc('email', e.target.value)}
-                disabled={isLoading}
-                className={`h-11 ${accountErrors.email ? 'border-red-400' : ''}`}
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <Input
+                  type="email"
+                  placeholder="you@school.com"
+                  value={account.email}
+                  onChange={(e) => setAcc('email', e.target.value)}
+                  disabled={isLoading}
+                  className={`h-11 pl-10 focus-visible:ring-blue-500/25 focus-visible:border-blue-500 ${accountErrors.email ? 'border-red-400' : ''}`}
+                />
+              </div>
               {accountErrors.email && <p className="text-xs text-red-500">{accountErrors.email}</p>}
             </div>
 
@@ -256,13 +265,14 @@ export default function RegisterPage() {
                 Password <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 <Input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Min. 8 characters"
                   value={account.password}
                   onChange={(e) => setAcc('password', e.target.value)}
                   disabled={isLoading}
-                  className={`h-11 pr-10 ${accountErrors.password ? 'border-red-400' : ''}`}
+                  className={`h-11 pl-10 pr-10 focus-visible:ring-blue-500/25 focus-visible:border-blue-500 ${accountErrors.password ? 'border-red-400' : ''}`}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -288,13 +298,14 @@ export default function RegisterPage() {
                 Confirm password <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 <Input
                   type={showConfirm ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={account.confirmPassword}
                   onChange={(e) => setAcc('confirmPassword', e.target.value)}
                   disabled={isLoading}
-                  className={`h-11 pr-10 ${accountErrors.confirmPassword ? 'border-red-400' : ''}`}
+                  className={`h-11 pl-10 pr-10 focus-visible:ring-blue-500/25 focus-visible:border-blue-500 ${accountErrors.confirmPassword ? 'border-red-400' : ''}`}
                 />
                 <button type="button" onClick={() => setShowConfirm(!showConfirm)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -361,13 +372,16 @@ export default function RegisterPage() {
               <Label className="text-sm font-medium text-gray-700">
                 School name <span className="text-red-500">*</span>
               </Label>
-              <Input
-                placeholder="Springfield Academy"
-                value={school.name}
-                onChange={(e) => handleSchoolName(e.target.value)}
-                disabled={isLoading}
-                className={`h-11 ${schoolErrors.name ? 'border-red-400' : ''}`}
-              />
+              <div className="relative">
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <Input
+                  placeholder="Springfield Academy"
+                  value={school.name}
+                  onChange={(e) => handleSchoolName(e.target.value)}
+                  disabled={isLoading}
+                  className={`h-11 pl-10 focus-visible:ring-blue-500/25 focus-visible:border-blue-500 ${schoolErrors.name ? 'border-red-400' : ''}`}
+                />
+              </div>
               {schoolErrors.name && <p className="text-xs text-red-500">{schoolErrors.name}</p>}
             </div>
 
@@ -382,7 +396,7 @@ export default function RegisterPage() {
                   value={school.subdomain}
                   onChange={(e) => setSch('subdomain', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                   disabled={isLoading}
-                  className={`h-11 rounded-r-none border-r-0 ${schoolErrors.subdomain ? 'border-red-400' : ''}`}
+                  className={`h-11 rounded-r-none border-r-0 focus-visible:ring-blue-500/25 focus-visible:border-blue-500 ${schoolErrors.subdomain ? 'border-red-400' : ''}`}
                 />
                 <span className="h-11 px-3 flex items-center bg-gray-50 border border-gray-300 rounded-r-lg text-sm text-gray-500 whitespace-nowrap">
                   .educore.app
@@ -400,59 +414,71 @@ export default function RegisterPage() {
                 <Label className="text-sm font-medium text-gray-700">
                   Country <span className="text-red-500">*</span>
                 </Label>
-                <select
-                  value={school.country}
-                  onChange={(e) => setSch('country', e.target.value)}
-                  disabled={isLoading}
-                  className="w-full h-11 border border-gray-300 rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  <option value="GH">Ghana</option>
-                  <option value="NG">Nigeria</option>
-                  <option value="KE">Kenya</option>
-                  <option value="ZA">South Africa</option>
-                  <option value="US">United States</option>
-                  <option value="GB">United Kingdom</option>
-                  <option value="CA">Canada</option>
-                  <option value="AU">Australia</option>
-                  <option value="IN">India</option>
-                </select>
+                <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+                  <select
+                    value={school.country}
+                    onChange={(e) => setSch('country', e.target.value)}
+                    disabled={isLoading}
+                    className="w-full h-11 border border-gray-300 rounded-md pl-10 pr-3 text-sm focus:outline-none focus:ring-3 focus:ring-blue-500/25 focus:border-blue-500 bg-white appearance-none"
+                  >
+                    <option value="GH">Ghana</option>
+                    <option value="NG">Nigeria</option>
+                    <option value="KE">Kenya</option>
+                    <option value="ZA">South Africa</option>
+                    <option value="US">United States</option>
+                    <option value="GB">United Kingdom</option>
+                    <option value="CA">Canada</option>
+                    <option value="AU">Australia</option>
+                    <option value="IN">India</option>
+                  </select>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Phone</Label>
-                <Input
-                  type="tel"
-                  placeholder="+233 00 000 0000"
-                  value={school.phone}
-                  onChange={(e) => setSch('phone', e.target.value)}
-                  disabled={isLoading}
-                  className="h-11"
-                />
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <Input
+                    type="tel"
+                    placeholder="+233 00 000 0000"
+                    value={school.phone}
+                    onChange={(e) => setSch('phone', e.target.value)}
+                    disabled={isLoading}
+                    className="h-11 pl-10 focus-visible:ring-blue-500/25 focus-visible:border-blue-500"
+                  />
+                </div>
               </div>
             </div>
 
             {/* School email */}
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">School email</Label>
-              <Input
-                type="email"
-                placeholder="info@school.com"
-                value={school.email}
-                onChange={(e) => setSch('email', e.target.value)}
-                disabled={isLoading}
-                className="h-11"
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <Input
+                  type="email"
+                  placeholder="info@school.com"
+                  value={school.email}
+                  onChange={(e) => setSch('email', e.target.value)}
+                  disabled={isLoading}
+                  className="h-11 pl-10 focus-visible:ring-blue-500/25 focus-visible:border-blue-500"
+                />
+              </div>
             </div>
 
             {/* Address */}
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">Address</Label>
-              <Input
-                placeholder="123 School Road, City"
-                value={school.address}
-                onChange={(e) => setSch('address', e.target.value)}
-                disabled={isLoading}
-                className="h-11"
-              />
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <Input
+                  placeholder="123 School Road, City"
+                  value={school.address}
+                  onChange={(e) => setSch('address', e.target.value)}
+                  disabled={isLoading}
+                  className="h-11 pl-10 focus-visible:ring-blue-500/25 focus-visible:border-blue-500"
+                />
+              </div>
             </div>
 
             <div className="flex gap-3 pt-1">
